@@ -1,0 +1,462 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A01000001 /* SlippyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000001 /* SlippyApp.swift */; };
+		A01000002 /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000002 /* PersistenceController.swift */; };
+		A01000003 /* Receipt+CoreData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000003 /* Receipt+CoreData.swift */; };
+		A01000004 /* Category+CoreData.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000004 /* Category+CoreData.swift */; };
+		A01000005 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000005 /* OCRService.swift */; };
+		A01000006 /* CategorizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000006 /* CategorizationService.swift */; };
+		A01000007 /* ClaudeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000007 /* ClaudeService.swift */; };
+		A01000008 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000008 /* Extensions.swift */; };
+		A01000009 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000009 /* DashboardView.swift */; };
+		A01000010 /* CategoryBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000010 /* CategoryBarChart.swift */; };
+		A01000011 /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000011 /* ScannerView.swift */; };
+		A01000012 /* OCRPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000012 /* OCRPreviewView.swift */; };
+		A01000013 /* ReceiptListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000013 /* ReceiptListView.swift */; };
+		A01000014 /* ReceiptRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000014 /* ReceiptRowView.swift */; };
+		A01000015 /* ReceiptDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000015 /* ReceiptDetailView.swift */; };
+		A01000016 /* AISuggestionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000016 /* AISuggestionCard.swift */; };
+		A01000017 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000017 /* SettingsView.swift */; };
+		A01000018 /* Slippy.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A00000018 /* Slippy.xcdatamodeld */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A00000001 /* SlippyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlippyApp.swift; sourceTree = "<group>"; };
+		A00000002 /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		A00000003 /* Receipt+CoreData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Receipt+CoreData.swift"; sourceTree = "<group>"; };
+		A00000004 /* Category+CoreData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Category+CoreData.swift"; sourceTree = "<group>"; };
+		A00000005 /* OCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRService.swift; sourceTree = "<group>"; };
+		A00000006 /* CategorizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorizationService.swift; sourceTree = "<group>"; };
+		A00000007 /* ClaudeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeService.swift; sourceTree = "<group>"; };
+		A00000008 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		A00000009 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A00000010 /* CategoryBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryBarChart.swift; sourceTree = "<group>"; };
+		A00000011 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
+		A00000012 /* OCRPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRPreviewView.swift; sourceTree = "<group>"; };
+		A00000013 /* ReceiptListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptListView.swift; sourceTree = "<group>"; };
+		A00000014 /* ReceiptRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptRowView.swift; sourceTree = "<group>"; };
+		A00000015 /* ReceiptDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptDetailView.swift; sourceTree = "<group>"; };
+		A00000016 /* AISuggestionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AISuggestionCard.swift; sourceTree = "<group>"; };
+		A00000017 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A00000018 /* Slippy.xcdatamodeld */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Slippy.xcdatamodeld; sourceTree = "<group>"; };
+		A00000019 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A000000FF /* Slippy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Slippy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		A0MAIN /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A000000FF /* Slippy.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A0ROOT = {
+			isa = PBXGroup;
+			children = (
+				A0APP /* App */,
+				A0MODELS /* Models */,
+				A0VIEWS /* Views */,
+				A0SERVICES /* Services */,
+				A0UTILITIES /* Utilities */,
+				A0MAIN /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A0APP /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A00000001 /* SlippyApp.swift */,
+				A00000019 /* Info.plist */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A0MODELS /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A00000018 /* Slippy.xcdatamodeld */,
+				A00000003 /* Receipt+CoreData.swift */,
+				A00000004 /* Category+CoreData.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A0VIEWS /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A0VDASH /* Dashboard */,
+				A0VSCAN /* Scanner */,
+				A0VLIST /* ReceiptList */,
+				A0VDETAIL /* ReceiptDetail */,
+				A0VSETTINGS /* Settings */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A0VDASH /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				A00000009 /* DashboardView.swift */,
+				A00000010 /* CategoryBarChart.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		A0VSCAN /* Scanner */ = {
+			isa = PBXGroup;
+			children = (
+				A00000011 /* ScannerView.swift */,
+				A00000012 /* OCRPreviewView.swift */,
+			);
+			path = Scanner;
+			sourceTree = "<group>";
+		};
+		A0VLIST /* ReceiptList */ = {
+			isa = PBXGroup;
+			children = (
+				A00000013 /* ReceiptListView.swift */,
+				A00000014 /* ReceiptRowView.swift */,
+			);
+			path = ReceiptList;
+			sourceTree = "<group>";
+		};
+		A0VDETAIL /* ReceiptDetail */ = {
+			isa = PBXGroup;
+			children = (
+				A00000015 /* ReceiptDetailView.swift */,
+				A00000016 /* AISuggestionCard.swift */,
+			);
+			path = ReceiptDetail;
+			sourceTree = "<group>";
+		};
+		A0VSETTINGS /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A00000017 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		A0SERVICES /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A00000002 /* PersistenceController.swift */,
+				A00000005 /* OCRService.swift */,
+				A00000006 /* CategorizationService.swift */,
+				A00000007 /* ClaudeService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A0UTILITIES /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				A00000008 /* Extensions.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A0TARGET /* Slippy */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0CONFIGLIST /* Build configuration list for PBXNativeTarget "Slippy" */;
+			buildPhases = (
+				A0SOURCES /* Sources */,
+				A0FRAMEWORKS /* Frameworks */,
+				A0RESOURCES /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Slippy;
+			productName = Slippy;
+			productReference = A000000FF /* Slippy.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A0PROJECT /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A0TARGET = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A0PROJCONFIG /* Build configuration list for PBXProject "Slippy" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A0ROOT;
+			productRefGroup = A0MAIN /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A0TARGET /* Slippy */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A0SOURCES /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A01000001 /* SlippyApp.swift in Sources */,
+				A01000002 /* PersistenceController.swift in Sources */,
+				A01000003 /* Receipt+CoreData.swift in Sources */,
+				A01000004 /* Category+CoreData.swift in Sources */,
+				A01000005 /* OCRService.swift in Sources */,
+				A01000006 /* CategorizationService.swift in Sources */,
+				A01000007 /* ClaudeService.swift in Sources */,
+				A01000008 /* Extensions.swift in Sources */,
+				A01000009 /* DashboardView.swift in Sources */,
+				A01000010 /* CategoryBarChart.swift in Sources */,
+				A01000011 /* ScannerView.swift in Sources */,
+				A01000012 /* OCRPreviewView.swift in Sources */,
+				A01000013 /* ReceiptListView.swift in Sources */,
+				A01000014 /* ReceiptRowView.swift in Sources */,
+				A01000015 /* ReceiptDetailView.swift in Sources */,
+				A01000016 /* AISuggestionCard.swift in Sources */,
+				A01000017 /* SettingsView.swift in Sources */,
+				A01000018 /* Slippy.xcdatamodeld in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A0FRAMEWORKS /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A0RESOURCES /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A0DEBUGCONFIG /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A0RELEASECONFIG /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A0TARGETDEBUG /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.slippy.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A0TARGETRELEASE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.slippy.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A0PROJCONFIG /* Build configuration list for PBXProject "Slippy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0DEBUGCONFIG /* Debug */,
+				A0RELEASECONFIG /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A0CONFIGLIST /* Build configuration list for PBXNativeTarget "Slippy" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0TARGETDEBUG /* Debug */,
+				A0TARGETRELEASE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = A0PROJECT /* Project object */;
+}
