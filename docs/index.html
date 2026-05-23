@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slippy — Snap your slip. Know your spending.</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:   #007AFF;
+      --green:  #30D158;
+      --orange: #FF9500;
+      --purple: #AF52DE;
+      --red:    #FF3B30;
+      --gray:   #8E8E93;
+      --bg:     #F2F2F7;
+      --card:   #FFFFFF;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: #1C1C1E;
+      min-height: 100vh;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(160deg, #007AFF 0%, #0051D5 100%);
+      color: white;
+      padding: 80px 24px 120px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.12) 0%, transparent 60%);
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,.2);
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      margin-bottom: 24px;
+      backdrop-filter: blur(8px);
+    }
+    .hero h1 {
+      font-size: clamp(42px, 8vw, 72px);
+      font-weight: 800;
+      letter-spacing: -.03em;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: #A8D8FF; }
+    .hero p {
+      font-size: clamp(17px, 3vw, 22px);
+      opacity: .85;
+      max-width: 500px;
+      margin: 0 auto 40px;
+      line-height: 1.5;
+    }
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: white;
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 16px;
+      padding: 14px 28px;
+      border-radius: 50px;
+      text-decoration: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      transition: transform .15s, box-shadow .15s;
+    }
+    .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,.25); }
+
+    /* ── PHONE MOCKUP ── */
+    .phone-wrap {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-top: -80px;
+      padding: 0 24px 80px;
+      position: relative;
+      z-index: 10;
+    }
+    .phone {
+      width: 260px;
+      background: #1C1C1E;
+      border-radius: 44px;
+      padding: 14px;
+      box-shadow: 0 32px 64px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.08);
+      flex-shrink: 0;
+    }
+    .phone-inner {
+      background: var(--bg);
+      border-radius: 32px;
+      overflow: hidden;
+      height: 520px;
+      position: relative;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 100px; height: 28px;
+      background: #1C1C1E;
+      border-radius: 0 0 18px 18px;
+      z-index: 10;
+    }
+
+    /* ── SCREEN 1: DASHBOARD ── */
+    .screen { width: 100%; height: 100%; display: flex; flex-direction: column; }
+    .nav-bar {
+      background: rgba(242,242,247,.85);
+      backdrop-filter: blur(12px);
+      padding: 48px 16px 8px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .month-picker {
+      display: flex; align-items: center; justify-content: space-between;
+      background: white; border-radius: 10px; padding: 8px 14px; margin: 8px 16px 0;
+      font-size: 14px; font-weight: 600;
+    }
+    .month-picker .chev { color: var(--blue); font-size: 12px; }
+    .scroll-area { flex: 1; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .card {
+      background: white; border-radius: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    .spend-card { padding: 20px; text-align: center; }
+    .spend-label { font-size: 11px; color: #8E8E93; font-weight: 500; }
+    .spend-amount { font-size: 42px; font-weight: 800; color: var(--blue); line-height: 1.1; letter-spacing: -.03em; }
+    .spend-delta { font-size: 12px; color: var(--green); font-weight: 600; margin-top: 4px; }
+    .stat-row { display: flex; border-top: 1px solid #F2F2F7; }
+    .stat { flex: 1; padding: 10px 0; text-align: center; }
+    .stat + .stat { border-left: 1px solid #F2F2F7; }
+    .stat-val { font-size: 14px; font-weight: 700; }
+    .stat-lbl { font-size: 10px; color: #8E8E93; }
+    .chart-card { padding: 16px; }
+    .chart-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .bar-icon { font-size: 11px; width: 18px; text-align: center; }
+    .bar-label { font-size: 10px; color: #3C3C43; width: 60px; }
+    .bar-track { flex: 1; height: 8px; background: #F2F2F7; border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 4px; }
+    .bar-val { font-size: 10px; color: #8E8E93; width: 34px; text-align: right; }
+    .tab-bar {
+      display: flex; background: rgba(242,242,247,.9); backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(0,0,0,.08); padding: 6px 0 12px;
+    }
+    .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: #8E8E93; cursor: pointer; }
+    .tab.active { color: var(--blue); }
+    .tab-icon { font-size: 18px; }
+    .fab {
+      position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
+      width: 48px; height: 48px; background: var(--blue); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,122,255,.45); font-size: 22px; color: white;
+      z-index: 5;
+    }
+
+    /* ── SCREEN 2: RECEIPT LIST ── */
+    .list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-bottom: 1px solid #F2F2F7;
+    }
+    .list-item:last-child { border-bottom: none; }
+    .cat-icon-box {
+      width: 36px; height: 36px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .list-item-info { flex: 1; min-width: 0; }
+    .list-item-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-item-sub { font-size: 10px; color: #8E8E93; margin-top: 1px; }
+    .list-item-amount { font-size: 13px; font-weight: 700; white-space: nowrap; }
+    .section-header { font-size: 12px; font-weight: 600; color: #8E8E93; padding: 6px 16px 2px; }
+
+    /* ── SCREEN 3: AI CARD ── */
+    .detail-header { padding: 48px 16px 12px; background: rgba(242,242,247,.85); backdrop-filter: blur(12px); }
+    .detail-title { font-size: 18px; font-weight: 700; }
+    .detail-sub { font-size: 12px; color: #8E8E93; }
+    .detail-body { flex: 1; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .detail-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .detail-total { display: flex; justify-content: space-between; align-items: center; }
+    .detail-total-lbl { font-size: 13px; color: #8E8E93; font-weight: 500; }
+    .detail-total-val { font-size: 24px; font-weight: 800; color: var(--blue); }
+    .cat-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .ai-card { background: white; border-radius: 16px; padding: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    .ai-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .ai-spark { font-size: 14px; }
+    .ai-title { font-size: 13px; font-weight: 700; }
+    .ai-text { font-size: 11px; line-height: 1.5; color: #3C3C43; }
+    .ai-badge { display: inline-block; background: var(--orange); color: white; font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-left: auto; }
+    .item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F2F2F7; font-size: 11px; }
+    .item-row:last-child { border-bottom: none; }
+
+    /* ── FEATURES ── */
+    .section { max-width: 960px; margin: 0 auto; padding: 64px 24px; }
+    .section-title { font-size: clamp(28px, 5vw, 42px); font-weight: 800; letter-spacing: -.02em; text-align: center; margin-bottom: 12px; }
+    .section-sub { text-align: center; color: #636366; font-size: 17px; margin-bottom: 48px; line-height: 1.5; }
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+    .feature-card {
+      background: white; border-radius: 20px; padding: 28px 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,.1); }
+    .feature-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 16px;
+    }
+    .feature-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: #636366; line-height: 1.55; }
+
+    /* ── STACK PILLS ── */
+    .stack { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 48px; }
+    .pill {
+      background: white; border-radius: 50px; padding: 8px 18px;
+      font-size: 13px; font-weight: 600; color: #1C1C1E;
+      box-shadow: 0 1px 6px rgba(0,0,0,.08);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .pill-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 40px 24px;
+      font-size: 13px; color: #8E8E93;
+      border-top: 1px solid #E5E5EA;
+    }
+    footer a { color: var(--blue); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .phone { width: 230px; }
+      .phone-inner { height: 460px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-badge">📱 iOS 17+ · SwiftUI · No subscriptions required</div>
+  <h1>Slippy<br><span>Know your spending.</span></h1>
+  <p>Snap your receipt. OCR extracts the data. AI helps you save more.</p>
+  <a class="hero-cta" href="https://github.com/francescadilallo-cpu/Slippy" target="_blank">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+    View on GitHub
+  </a>
+</section>
+
+<!-- ── PHONE MOCKUPS ── -->
+<div class="phone-wrap">
+
+  <!-- Phone 1: Dashboard -->
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="phone-notch"></div>
+      <div class="screen">
+        <div class="nav-bar">Dashboard</div>
+        <div class="month-picker">
+          <span class="chev">‹</span>
+          <span>May 2025</span>
+          <span class="chev" style="opacity:.3">›</span>
+        </div>
+        <div class="scroll-area">
+          <div class="card spend-card">
+            <div class="spend-label">Monthly Spend</div>
+            <div class="spend-amount">€ 347,80</div>
+            <div class="spend-delta">↓ 12.4% vs last month</div>
+            <div class="stat-row">
+              <div class="stat"><div class="stat-val">14</div><div class="stat-lbl">Receipts</div></div>
+              <div class="stat"><div class="stat-val">€ 24,8</div><div class="stat-lbl">Avg. Ticket</div></div>
+            </div>
+          </div>
+          <div class="card chart-card">
+            <div class="chart-title">By Category</div>
+            <div class="bar-row">
+              <div class="bar-icon">🛒</div>
+              <div class="bar-label" style="font-size:10px">Groceries</div>
+              <div class="bar-track"><div class="bar-fill" style="width:72%;background:#34C759"></div></div>
+              <div class="bar-val">€ 148</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-icon">🍴</div>
+              <div class="bar-label" style="font-size:10px">Restaurants</div>
+              <div class="bar-track"><div class="bar-fill" style="width:44%;background:#FF9500"></div></div>
+              <div class="bar-val">€ 91</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-icon">👜</div>
+              <div class="bar-label" style="font-size:10px">Shopping</div>
+              <div class="bar-track"><div class="bar-fill" style="width:30%;background:#AF52DE"></div></div>
+              <div class="bar-val">€ 62</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-icon">⛽</div>
+              <div class="bar-label" style="font-size:10px">Fuel</div>
+              <div class="bar-track"><div class="bar-fill" style="width:18%;background:#FF6B00"></div></div>
+              <div class="bar-val">€ 37</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-icon">💊</div>
+              <div class="bar-label" style="font-size:10px">Pharmacy</div>
+              <div class="bar-track"><div class="bar-fill" style="width:9%;background:#FF3B30"></div></div>
+              <div class="bar-val">€ 9,8</div>
+            </div>
+          </div>
+        </div>
+        <div class="fab">⊕</div>
+        <div class="tab-bar">
+          <div class="tab active"><div class="tab-icon">📊</div>Dashboard</div>
+          <div class="tab"><div class="tab-icon">🧾</div>Receipts</div>
+          <div class="tab"><div class="tab-icon">⚙️</div>Settings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phone 2: Receipt List -->
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="phone-notch"></div>
+      <div class="screen">
+        <div class="nav-bar">Receipts</div>
+        <div style="padding: 6px 16px;">
+          <div style="background:white;border-radius:10px;padding:7px 12px;font-size:12px;color:#8E8E93;display:flex;align-items:center;gap:6px;">
+            🔍 Search store or category…
+          </div>
+        </div>
+        <div style="flex:1;overflow:hidden;">
+          <div class="section-header">Today</div>
+          <div class="list-item">
+            <div class="cat-icon-box" style="background:#34C75920;">🛒</div>
+            <div class="list-item-info">
+              <div class="list-item-name">Esselunga</div>
+              <div class="list-item-sub" style="color:#34C759">Groceries · Today</div>
+            </div>
+            <div class="list-item-amount">€ 42,50</div>
+          </div>
+          <div class="list-item">
+            <div class="cat-icon-box" style="background:#FF950020;">🍴</div>
+            <div class="list-item-info">
+              <div class="list-item-name">Pizzeria Da Mario</div>
+              <div class="list-item-sub" style="color:#FF9500">Restaurants · Today</div>
+            </div>
+            <div class="list-item-amount">€ 28,00</div>
+          </div>
+          <div class="section-header">Yesterday</div>
+          <div class="list-item">
+            <div class="cat-icon-box" style="background:#AF52DE20;">👜</div>
+            <div class="list-item-info">
+              <div class="list-item-name">Zara</div>
+              <div class="list-item-sub" style="color:#AF52DE">Clothing · Yesterday</div>
+            </div>
+            <div class="list-item-amount">€ 59,90</div>
+          </div>
+          <div class="list-item">
+            <div class="cat-icon-box" style="background:#FF3B3020;">💊</div>
+            <div class="list-item-info">
+              <div class="list-item-name">Farmacia Centro</div>
+              <div class="list-item-sub" style="color:#FF3B30">Pharmacy · Yesterday</div>
+            </div>
+            <div class="list-item-amount">€ 9,80</div>
+          </div>
+          <div class="section-header">This Week</div>
+          <div class="list-item">
+            <div class="cat-icon-box" style="background:#FF6B0020;">⛽</div>
+            <div class="list-item-info">
+              <div class="list-item-name">ENI</div>
+              <div class="list-item-sub" style="color:#FF6B00">Fuel · Mon 19</div>
+            </div>
+            <div class="list-item-amount">€ 37,00</div>
+          </div>
+          <div class="list-item">
+            <div class="cat-icon-box" style="background:#34C75920;">🛒</div>
+            <div class="list-item-info">
+              <div class="list-item-name">Lidl</div>
+              <div class="list-item-sub" style="color:#34C759">Groceries · Mon 19</div>
+            </div>
+            <div class="list-item-amount">€ 22,30</div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📊</div>Dashboard</div>
+          <div class="tab active"><div class="tab-icon">🧾</div>Receipts</div>
+          <div class="tab"><div class="tab-icon">⚙️</div>Settings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phone 3: Receipt Detail + AI -->
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="phone-notch"></div>
+      <div class="screen">
+        <div class="detail-header">
+          <div style="font-size:11px;color:var(--blue);margin-bottom:4px;">‹ Receipts</div>
+          <div class="detail-title">Esselunga</div>
+          <div class="detail-sub">📅 23 May 2025 · Groceries</div>
+        </div>
+        <div class="detail-body">
+          <div class="detail-card">
+            <div class="detail-total">
+              <span class="detail-total-lbl">Total</span>
+              <span class="detail-total-val">€ 42,50</span>
+            </div>
+            <div class="cat-row">
+              <div class="cat-icon-box" style="background:#34C75920;width:32px;height:32px;font-size:14px;">🛒</div>
+              <span style="font-size:13px;font-weight:600;">Groceries</span>
+              <span style="margin-left:auto;font-size:11px;color:var(--blue);font-weight:600;">Change</span>
+            </div>
+          </div>
+          <div class="detail-card" style="padding:12px 16px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Items</div>
+            <div class="item-row"><span>Pasta Barilla 500g</span><span>€ 1,89</span></div>
+            <div class="item-row"><span>Latte Intero 1L</span><span>€ 1,35</span></div>
+            <div class="item-row"><span>Pane Integrale</span><span>€ 2,40</span></div>
+            <div class="item-row"><span>Mozzarella</span><span>€ 1,69</span></div>
+          </div>
+          <div class="ai-card">
+            <div class="ai-header">
+              <span class="ai-spark">✨</span>
+              <span class="ai-title">AI Saving Tip</span>
+              <span class="ai-badge">Claude</span>
+            </div>
+            <div class="ai-text">Try shopping at Lidl or Eurospin for staples like pasta and milk — you could save up to €15/month on the same items with a bit of brand flexibility. 🛒</div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📊</div>Dashboard</div>
+          <div class="tab active"><div class="tab-icon">🧾</div>Receipts</div>
+          <div class="tab"><div class="tab-icon">⚙️</div>Settings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /phone-wrap -->
+
+<!-- ── FEATURES ── -->
+<section class="section">
+  <div class="section-title">Everything you need to track spending</div>
+  <div class="section-sub">No subscriptions. No cloud required. Everything stays on your iPhone.</div>
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#007AFF18;">📷</div>
+      <h3>Instant OCR Scanning</h3>
+      <p>VisionKit + Vision framework reads Italian and English receipts with high accuracy. Always shows an editable preview so you can fix any errors.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#AF52DE18;">🏷️</div>
+      <h3>Smart Categorization</h3>
+      <p>Keyword rules automatically assign categories. Correct once — Slippy learns and remembers your preferences for future receipts.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#30D15818;">📊</div>
+      <h3>Monthly Dashboard</h3>
+      <p>See your total spend, % change vs last month, and a colour-coded bar chart per category. Navigate any month in history.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#FF950018;">✨</div>
+      <h3>AI Saving Tips</h3>
+      <p>Powered by Claude. Get a short, specific, actionable suggestion based on what you actually spent. Works offline gracefully.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#FF3B3018;">🔒</div>
+      <h3>Private by Default</h3>
+      <p>All data lives in Core Data on your device. API key stored in iOS Keychain. Zero telemetry, zero analytics.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#34C75918;">📤</div>
+      <h3>CSV Export</h3>
+      <p>Export all receipts as a spreadsheet-ready CSV via the iOS share sheet. Perfect for expense reports or personal budgeting.</p>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="pill"><div class="pill-dot" style="background:#007AFF"></div>SwiftUI iOS 17+</div>
+    <div class="pill"><div class="pill-dot" style="background:#30D158"></div>VisionKit OCR</div>
+    <div class="pill"><div class="pill-dot" style="background:#FF9500"></div>Core Data</div>
+    <div class="pill"><div class="pill-dot" style="background:#AF52DE"></div>Swift Charts</div>
+    <div class="pill"><div class="pill-dot" style="background:#FF3B30"></div>Keychain</div>
+    <div class="pill"><div class="pill-dot" style="background:#5856D6"></div>Claude API</div>
+    <div class="pill"><div class="pill-dot" style="background:#636366"></div>No 3rd-party deps</div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <p>Slippy — <em>Snap your slip. Know your spending.</em></p>
+  <p style="margin-top:8px;">
+    <a href="https://github.com/francescadilallo-cpu/Slippy" target="_blank">GitHub</a>
+    &nbsp;·&nbsp;
+    Built with SwiftUI &amp; Claude API
+  </p>
+</footer>
+
+</body>
+</html>
