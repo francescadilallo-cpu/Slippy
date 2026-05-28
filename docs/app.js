@@ -229,15 +229,15 @@ function processingScreenHTML(pct) {
   return `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-    <h2>Scanning</h2><div style="width:48px"></div>
+    <h2>Scanning</h2><div style="min-width:56px"></div>
   </div>
   <div class="processing">
     <div class="spin"></div>
-    <p style="font-size:17px;font-weight:600">Reading receipt…</p>
-    <div style="width:100%;max-width:280px;height:6px;background:var(--fill);border-radius:3px;overflow:hidden;margin-top:4px">
-      <div class="prog-bar" style="height:100%;background:var(--blue);border-radius:3px;transition:width .3s;width:${pct}%"></div>
+    <p style="font-size:16px;font-weight:600;color:var(--lbl)">Reading receipt…</p>
+    <div style="width:100%;max-width:260px;height:4px;background:var(--fill2);border-radius:2px;overflow:hidden;margin-top:2px">
+      <div class="prog-bar" style="height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:${pct}%"></div>
     </div>
-    <span class="prog-pct" style="font-size:14px;color:var(--gray)">${pct}%</span>
+    <span class="prog-pct" style="font-size:13px;color:var(--lbl2)">${pct}%</span>
   </div>`;
 }
 
@@ -259,34 +259,34 @@ function renderOCRPreview(parsed, imgURL) {
 
   overlay.innerHTML = `
   <div class="nav-row">
-    <button class="back-btn" onclick="renderScannerPicker()">‹</button>
-    <h2>Confirm Receipt</h2>
+    <button class="back-btn" onclick="renderScannerPicker()">‹ Back</button>
+    <h2>Confirm</h2>
     <button class="nav-act" onclick="saveReceiptFromForm()">Save</button>
   </div>
   <div style="padding-bottom:40px">
     ${imgURL ? `<img src="${imgURL}" class="img-thumb" style="margin:12px auto"/>` : ''}
     <div class="fsec">
       <div class="fhdr">Store</div>
-      <div class="frow" style="border-radius:14px">
+      <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="fn" value="${esc(parsed.storeName)}" placeholder="Store name"/>
       </div>
     </div>
     <div class="fsec">
       <div class="fhdr">Total</div>
-      <div class="frow" style="border-radius:14px">
+      <div class="frow" style="border-radius:var(--r)">
         <span class="flbl">€</span>
         <input class="finp" id="ft" type="number" step="0.01" value="${parsed.total.toFixed(2)}" placeholder="0.00"/>
       </div>
     </div>
     <div class="fsec">
       <div class="fhdr">Date</div>
-      <div class="frow" style="border-radius:14px">
+      <div class="frow" style="border-radius:var(--r)">
         <input class="finp" id="fd" type="date" value="${parsed.date}"/>
       </div>
     </div>
     <div class="fsec">
       <div class="fhdr">Category</div>
-      <div class="frow" style="border-radius:14px">
+      <div class="frow" style="border-radius:var(--r)">
         <select class="finp" id="fc">${catsOpt}</select>
       </div>
     </div>
@@ -296,7 +296,7 @@ function renderOCRPreview(parsed, imgURL) {
       ${itemsRows}
     </div>` : ''}
     <div class="pad"></div>
-    <button class="btn btn-p" onclick="saveReceiptFromForm()">💾  Save Receipt</button>
+    <button class="btn btn-p" onclick="saveReceiptFromForm()">Save Receipt</button>
     <div class="pad"></div>
   </div>`;
 }
@@ -368,17 +368,16 @@ function renderScannerPicker() {
   document.getElementById('oscanner').innerHTML = `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-    <h2>Add Receipt</h2><div style="width:48px"></div>
+    <h2>Add Receipt</h2><div style="min-width:56px"></div>
   </div>
   <div class="scan-pick">
     <div class="scan-pick-ico">🧾</div>
     <div class="scan-btns">
-      <button class="btn btn-p" onclick="triggerCapture(true)">📷  Use Camera</button>
-      <button class="btn btn-s" onclick="triggerCapture(false)">🖼️  Choose from Library</button>
+      <button class="btn btn-p" onclick="triggerCapture(true)">Use Camera</button>
+      <button class="btn btn-s" onclick="triggerCapture(false)">Choose from Library</button>
     </div>
-    <p style="font-size:13px;color:var(--gray);margin-top:12px;line-height:1.6;text-align:center">
-      Point your camera at a receipt or pick a photo from your library.<br>
-      OCR runs in-browser via Tesseract.js.
+    <p style="font-size:13px;color:var(--lbl2);margin-top:8px;line-height:1.6;text-align:center">
+      OCR runs in-browser — no upload, fully private.
     </p>
   </div>`;
 }
@@ -446,7 +445,7 @@ function renderDashboard() {
     <button onclick="shiftMonth(1)" ${nextDisabled}>›</button>
   </div>
   <div class="card spend-card">
-    <div class="s-lbl">SPENT THIS MONTH</div>
+    <div class="s-lbl">Spent this month</div>
     <div class="s-amt">${fmt(total)}</div>
     ${deltaStr}
     <div class="s-stats">
@@ -513,7 +512,7 @@ function renderReceipts(q) {
   el.innerHTML = `
   <div class="nav"><h1>Receipts</h1></div>
   <div class="search-wrap">
-    <input class="search-inp" placeholder="🔍  Search receipts…"
+    <input class="search-inp" placeholder="Search receipts…"
       value="${esc(state.searchQ)}" oninput="renderReceipts(this.value)"/>
   </div>
   ${bodyHTML}
@@ -554,8 +553,8 @@ function renderReceiptDetail(id) {
   const existingTip = state.aiTips[id];
   const tipHTML = existingTip
     ? `<p class="ai-tip">${esc(existingTip)}</p>`
-    : `<p style="font-size:13px;color:var(--gray);margin-bottom:10px">Get a personalized saving tip for this receipt.</p>
-       <button class="ai-btn" onclick="fetchTip('${id}')">Get tip →</button>`;
+    : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Get a personalized saving tip for this receipt.</p>
+       <button class="ai-btn" onclick="fetchTip('${id}')">Get tip</button>`;
 
   overlay.innerHTML = `
   <div class="nav-row">
@@ -570,14 +569,14 @@ function renderReceiptDetail(id) {
       <div class="det-date">${fmtDate(r.date || r.createdAt)}</div>
       <div class="det-total">${fmt(r.totalAmount || 0)}</div>
     </div>
-    <div class="det-sec" style="margin-top:12px">
+    <div class="det-sec" style="margin-top:14px">
       <h3>Category</h3>
       <div class="chips">${chipsHTML}</div>
     </div>
     ${itemsHTML}
     <div class="card ai-card" id="tip_${id}">
       <div class="ai-hdr">
-        <span style="font-size:18px">✨</span>
+        <span style="font-size:16px">✦</span>
         <h3>AI Saving Tip</h3>
         <span class="ai-badge">Claude</span>
       </div>
@@ -619,15 +618,15 @@ function renderSettings() {
   el.innerHTML = `
   <div class="nav"><h1>Settings</h1></div>
   <div class="ssel">
-    <div class="sshdr">🔑  Claude API Key</div>
+    <div class="sshdr">Claude API Key</div>
     <div class="srow" style="flex-direction:column;align-items:stretch;gap:10px;padding:14px 16px">
       <input class="kinp" id="apik" type="password"
         placeholder="sk-ant-…" value="${esc(key)}"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-s" style="flex:1;width:auto;padding:10px;font-size:14px;margin:0"
-          onclick="toggleKeyVis()">👁 Show/Hide</button>
-        <button class="btn btn-p" style="flex:1;width:auto;padding:10px;font-size:14px;margin:0"
+        <button class="btn btn-s" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
+          onclick="toggleKeyVis()">Show / Hide</button>
+        <button class="btn btn-p" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
           onclick="saveApiKey()">Save</button>
       </div>
       ${key ? `<button class="btn btn-d" style="width:auto;padding:10px;font-size:13px;margin:0"
@@ -636,22 +635,22 @@ function renderSettings() {
     <div class="snote">Stored in localStorage. Get yours at console.anthropic.com.</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">📦  Data</div>
+    <div class="sshdr">Data</div>
     <button class="btn btn-s" style="margin-bottom:10px" onclick="exportCSV()" ${!count ? 'disabled' : ''}>
-      ⬆️  Export to CSV
+      Export to CSV
     </button>
     <button class="btn btn-d" onclick="clearAllData()" ${!count ? 'disabled' : ''}>
-      🗑  Clear All Data
+      Clear All Data
     </button>
     <div class="snote">${count} receipt${count === 1 ? '' : 's'} stored locally.</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">ℹ️  About</div>
+    <div class="sshdr">About</div>
     <div class="srow"><span class="slbl">Version</span><span class="sval">1.0 PWA</span></div>
     <div class="srow"><span class="slbl">OCR Engine</span><span class="sval">Tesseract.js 5</span></div>
-    <div class="srow"><span class="slbl">AI Model</span><span class="sval">claude-sonnet-4</span></div>
-    <div class="srow"><span class="slbl">Languages</span><span class="sval">Italian, English</span></div>
-    <div class="snote" style="text-align:center;padding:14px 4px;font-style:italic">
+    <div class="srow"><span class="slbl">AI Model</span><span class="sval">Claude Sonnet</span></div>
+    <div class="srow"><span class="slbl">Languages</span><span class="sval">Italian · English</span></div>
+    <div class="snote" style="text-align:center;padding:16px 4px;color:var(--lbl3)">
       Snap your slip. Know your spending.
     </div>
   </div>
@@ -723,8 +722,8 @@ async function fetchTip(receiptId) {
   }
 
   if (tipEl) tipEl.innerHTML = `
-    <div class="ai-hdr"><span style="font-size:18px">✨</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
-    <div class="spin" style="width:28px;height:28px;margin:10px auto;border-width:3px"></div>`;
+    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
+    <div class="spin" style="width:26px;height:26px;margin:10px auto;border-width:3px"></div>`;
 
   try {
     const cat    = catById(r.category);
@@ -755,14 +754,14 @@ async function fetchTip(receiptId) {
     state.aiTips[receiptId] = tip;
 
     if (tipEl) tipEl.innerHTML = `
-      <div class="ai-hdr"><span style="font-size:18px">✨</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
       <p class="ai-tip">${esc(tip)}</p>`;
   } catch (err) {
     const msg = err.message || 'Failed to fetch tip';
     if (tipEl) tipEl.innerHTML = `
-      <div class="ai-hdr"><span style="font-size:18px">✨</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
       <p style="font-size:13px;color:var(--red);margin-bottom:8px">${esc(msg)}</p>
-      <button class="ai-btn" onclick="fetchTip('${receiptId}')">Retry →</button>`;
+      <button class="ai-btn" onclick="fetchTip('${receiptId}')">Retry</button>`;
   }
 }
 
@@ -782,7 +781,7 @@ function init() {
       overlay.innerHTML = `
       <div class="nav-row">
         <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-        <h2>Error</h2><div style="width:48px"></div>
+        <h2>Error</h2><div style="min-width:56px"></div>
       </div>
       <div class="empty">
         <div class="empty-ico">⚠️</div>
