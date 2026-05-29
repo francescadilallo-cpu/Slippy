@@ -31,6 +31,7 @@ const state = {
   ocrData: null,
   detailId: null,
   searchQ: '',
+  filterCat: null,
   aiTips: {},
 };
 
@@ -306,7 +307,7 @@ function renderOCRPreview(parsed, imgURL) {
 
   overlay.innerHTML = `
   <div class="nav-row">
-    <button class="back-btn" onclick="renderScannerPickerOverlay()">‹ Back</button>
+    <button class="back-btn" onclick="closeOverlay('oscanner')">‹ Back</button>
     <h2>Confirm</h2>
     <button class="nav-act" onclick="saveReceiptFromForm()">Save</button>
   </div>
@@ -531,6 +532,105 @@ function quickDelete(id) {
   renderReceipts();
 }
 
+// ── CATEGORY FILTER ───────────────────────────────────────────
+function setFilter(cat) {
+  state.filterCat = cat;
+  renderReceipts();
+}
+
+// ── WEEK SUMMARY ──────────────────────────────────────────────
+function renderWeekSection(allRx) {
+  const now = new Date();
+  const dow = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Mon
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - dow); weekStart.setHours(0,0,0,0);
+  const lastWeekStart = new Date(weekStart); lastWeekStart.setDate(weekStart.getDate() - 7);
+
+  const thisW = allRx.filter(r => new Date(r.date || r.createdAt) >= weekStart);
+  const lastW = allRx.filter(r => { const d = new Date(r.date||r.createdAt); return d >= lastWeekStart && d < weekStart; });
+  if (!thisW.length) return '';
+
+  const thisT = thisW.reduce((s,r)=>s+(r.totalAmount||0),0);
+  const lastT = lastW.reduce((s,r)=>s+(r.totalAmount||0),0);
+  const diff  = lastT > 0 ? ((thisT - lastT) / lastT * 100) : null;
+  const dc    = diff !== null ? (diff > 0 ? 'var(--red)' : 'var(--green)') : '';
+
+  return `
+  <div class="card week-wrap">
+    <div class="week-lbl">Questa settimana</div>
+    <div class="week-body">
+      <div class="week-amt">${fmt(thisT)}</div>
+      ${diff !== null ? `<div class="week-delta" style="color:${dc}">${diff > 0 ? '↑' : '↓'} ${Math.abs(diff).toFixed(0)}%</div>` : ''}
+    </div>
+    <div class="week-sub">${thisW.length} scontrin${thisW.length===1?'o':'i'} · ${lastT > 0 ? (diff > 0 ? 'più della sett. scorsa' : 'meno della sett. scorsa') : 'prima settimana tracciata'}</div>
+  </div>`;
+}
+
+// ── EDIT RECEIPT ──────────────────────────────────────────────
+function showEditForm(id) {
+  const r = state.receipts.find(x => x.id === id);
+  if (!r) return;
+  const catsOpt = CATS.map(c =>
+    `<option value="${c.id}" ${c.id === r.category ? 'selected' : ''}>${c.icon} ${c.name}</option>`
+  ).join('');
+  const el = document.getElementById('odetail');
+  el.scrollTop = 0;
+  el.innerHTML = `
+  <div class="nav-row">
+    <button class="back-btn" onclick="openDetail('${id}')">Annulla</button>
+    <h2>Modifica</h2>
+    <button class="nav-act" onclick="saveReceiptEdit('${id}')">Salva</button>
+  </div>
+  <div style="padding-bottom:40px">
+    <div class="fsec">
+      <div class="fhdr">Negozio</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="en" value="${esc(r.storeName||'')}"/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Totale</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <span class="flbl">€</span>
+        <input class="finp" id="et" type="number" step="0.01" value="${(r.totalAmount||0).toFixed(2)}"/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Data</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" id="ed" type="date" value="${r.date||''}"/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Categoria</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <select class="finp" id="ec">${catsOpt}</select>
+      </div>
+    </div>
+    <div class="pad"></div>
+    <button class="btn btn-p" onclick="saveReceiptEdit('${id}')">Salva Modifiche</button>
+    <div class="pad"></div>
+  </div>`;
+}
+
+function saveReceiptEdit(id) {
+  const r = state.receipts.find(x => x.id === id);
+  if (!r) return;
+  const name = (document.getElementById('en')?.value||'').trim();
+  if (name) r.storeName = name;
+  const tot = parseFloat(document.getElementById('et')?.value||'');
+  if (!isNaN(tot)) r.totalAmount = tot;
+  const dt = document.getElementById('ed')?.value;
+  if (dt) r.date = dt;
+  const cat = document.getElementById('ec')?.value;
+  if (cat) { r.category = cat; state.learned[(r.storeName||'').toLowerCase()] = cat; saveLearned(); }
+  persist();
+  haptic('medium');
+  toast('Scontrino aggiornato');
+  openDetail(id);
+  renderDashboard();
+  if (state.tab === 'r') renderReceipts();
+}
+
 // ── MONTHLY TOTALS FOR SPARKLINE ──────────────────────────────
 function getMonthlyTotals(n) {
   const now = new Date();
@@ -698,8 +798,8 @@ function renderDashboard() {
 
   const deltaColor = delta !== null && delta <= 0 ? 'var(--green)' : 'var(--red)';
   const deltaStr   = delta !== null
-    ? `<div class="s-delta" style="color:${deltaColor}">${delta <= 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(0)}% vs last month</div>`
-    : `<div class="s-delta" style="color:var(--gray)">First month tracked</div>`;
+    ? `<div class="s-delta" style="color:${deltaColor}">${delta <= 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(0)}% rispetto al mese scorso</div>`
+    : `<div class="s-delta" style="color:var(--lbl2)">Primo mese tracciato</div>`;
 
   const chartSection = catRows.length > 0 ? `
   <div class="card chart-card">
@@ -720,7 +820,7 @@ function renderDashboard() {
     <p>Tap <strong>＋</strong> to scan your first receipt and start tracking your spending.</p>
   </div>` : '';
 
-  // Budget, Insights, Sparkline
+  const weekSection    = renderWeekSection(state.receipts);
   const budgetSection  = renderBudgetSection(total, state.settings.budget || 0);
   const insights       = calcInsights(thisRx, prevRx, mo);
   const insightSection = renderInsightsSection(insights);
@@ -735,15 +835,16 @@ function renderDashboard() {
     <button onclick="shiftMonth(1)" ${nextDisabled}>›</button>
   </div>
   <div class="card spend-card">
-    <div class="s-lbl">Spent this month</div>
+    <div class="s-lbl">Questo mese</div>
     <div class="s-amt">${fmt(total)}</div>
     ${deltaStr}
     <div class="s-stats">
-      <div class="sp"><div class="sp-v">${thisRx.length}</div><div class="sp-l">Receipts</div></div>
-      <div class="sp"><div class="sp-v">${fmt(avg)}</div><div class="sp-l">Average</div></div>
-      <div class="sp"><div class="sp-v">${catRows.length}</div><div class="sp-l">Categories</div></div>
+      <div class="sp"><div class="sp-v">${thisRx.length}</div><div class="sp-l">Scontrini</div></div>
+      <div class="sp"><div class="sp-v">${fmt(avg)}</div><div class="sp-l">Media</div></div>
+      <div class="sp"><div class="sp-v">${catRows.length}</div><div class="sp-l">Categorie</div></div>
     </div>
   </div>
+  ${weekSection}
   ${budgetSection}
   ${insightSection}
   ${sparkSection}
@@ -775,26 +876,57 @@ function renderReceipts(q) {
       catById(r.category).name.toLowerCase().includes(query)
     );
   }
+  if (state.filterCat) {
+    list = list.filter(r => r.category === state.filterCat);
+  }
+
+  // Build store frequency map for recurring badge
+  const storeFreq = {};
+  state.receipts.forEach(r => {
+    const s = r.storeName || 'Store';
+    storeFreq[s] = (storeFreq[s] || 0) + 1;
+  });
+
+  // Category filter chips
+  const usedCats = [...new Set(state.receipts.map(r => r.category))];
+  const filterBar = `
+  <div class="filter-wrap">
+    <button class="fchip ${!state.filterCat ? 'on' : ''}" onclick="setFilter(null)">Tutti</button>
+    ${usedCats.map(cid => {
+      const c = catById(cid);
+      const active = state.filterCat === cid;
+      return `<button class="fchip ${active ? 'on' : ''}"
+        style="${active ? `background:${c.color};border-color:${c.color}` : ''}"
+        onclick="setFilter('${cid}')">${c.icon} ${c.name}</button>`;
+    }).join('')}
+  </div>`;
+
+  const isFiltered = query || state.filterCat;
+  const countLine = isFiltered && list.length > 0
+    ? `<div class="result-count">${list.length} risultat${list.length===1?'o':'i'}</div>`
+    : '';
 
   let bodyHTML = '';
   if (list.length === 0) {
     bodyHTML = `<div class="empty">
-      <div class="empty-ico">${query ? '🔍' : '🧾'}</div>
-      <h3>${query ? 'No results' : 'No receipts'}</h3>
-      <p>${query ? `Nothing matches "${esc(state.searchQ)}"` : 'Tap + to add your first receipt.'}</p>
+      <div class="empty-ico">${isFiltered ? '🔍' : '🧾'}</div>
+      <h3>${isFiltered ? 'Nessun risultato' : 'Nessuno scontrino'}</h3>
+      <p>${isFiltered ? 'Prova a cambiare filtro o ricerca.' : 'Tocca + per aggiungere il primo scontrino.'}</p>
     </div>`;
   } else {
     groupByDate(list).forEach(([grp, rows]) => {
       bodyHTML += `<div class="sec"><div class="sec-hdr">${esc(grp)}</div><div class="sec-list">`;
       rows.forEach(r => {
-        const cat = catById(r.category);
+        const cat   = catById(r.category);
+        const freq  = storeFreq[r.storeName || 'Store'] || 0;
+        const badge = freq >= 3 ? `<span class="freq-badge">×${freq}</span>` : '';
         bodyHTML += `
         <div class="rx-wrap">
           <div class="rx-del-btn" onclick="quickDelete('${r.id}')"><span>Elimina</span></div>
           <div class="lrow" data-id="${r.id}" onclick="handleRowTap('${r.id}')">
             <div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>
             <div class="ri">
-              <div class="rn">${esc(r.storeName || 'Store')}</div>
+              <div class="rn">${esc(r.storeName || 'Store')}${badge}</div>
               <div class="rs">${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}</div>
             </div>
             <div class="ra">${fmt(r.totalAmount || 0)}</div>
@@ -806,11 +938,13 @@ function renderReceipts(q) {
   }
 
   el.innerHTML = `
-  <div class="nav"><h1>Receipts</h1></div>
+  <div class="nav"><h1>Scontrini</h1></div>
   <div class="search-wrap">
-    <input class="search-inp" placeholder="Search receipts…"
+    <input class="search-inp" placeholder="Cerca scontrini…"
       value="${esc(state.searchQ)}" oninput="renderReceipts(this.value)"/>
   </div>
+  ${usedCats.length > 0 ? filterBar : ''}
+  ${countLine}
   ${bodyHTML}
   <div class="pad"></div>`;
 
@@ -855,9 +989,9 @@ function buildDetailHTML(id) {
 
   return `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('odetail')">‹ Back</button>
-    <h2>Receipt</h2>
-    <button class="nav-act" style="color:var(--red)" onclick="confirmDelete('${id}')">Delete</button>
+    <button class="back-btn" onclick="closeOverlay('odetail')">‹ Indietro</button>
+    <h2>Scontrino</h2>
+    <button class="nav-act" onclick="showEditForm('${id}')">Modifica</button>
   </div>
   <div style="padding-bottom:48px">
     ${r.imageDataURL ? `<img src="${r.imageDataURL}" class="img-thumb" style="margin:12px auto"/>` : ''}
@@ -1121,6 +1255,28 @@ function init() {
 
   // FAB haptic
   document.getElementById('fab').addEventListener('click', () => haptic('light'));
+
+  // Swipe-down to close bottom sheet
+  const sht = document.getElementById('sht');
+  let _shY = 0, _shDragging = false;
+  sht.addEventListener('touchstart', e => {
+    if (!sht.classList.contains('on')) return;
+    _shY = e.touches[0].clientY;
+    _shDragging = true;
+    sht.style.transition = 'none';
+  }, { passive: true });
+  sht.addEventListener('touchmove', e => {
+    if (!_shDragging) return;
+    const dy = Math.max(0, e.touches[0].clientY - _shY);
+    sht.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+  sht.addEventListener('touchend', e => {
+    if (!_shDragging) return;
+    _shDragging = false;
+    sht.style.transition = 'transform .36s cubic-bezier(.4,0,.2,1)';
+    const dy = e.changedTouches[0].clientY - _shY;
+    if (dy > 72) { closeSheet(); } else { sht.style.transform = 'translateY(0)'; }
+  });
 
   renderDashboard();
 

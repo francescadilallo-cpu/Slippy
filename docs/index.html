@@ -282,6 +282,31 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .spark-wrap{margin:10px 16px 0;padding:16px;background:var(--card);border-radius:var(--r)}
 .spark-hdr{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
 .spark-title{font-size:10px;font-weight:700;color:var(--lbl2);text-transform:uppercase;letter-spacing:.07em}
+
+/* WEEK SUMMARY */
+.week-wrap{margin:10px 16px 0;padding:14px 16px;background:var(--card);border-radius:var(--r)}
+.week-lbl{font-size:10px;font-weight:700;color:var(--lbl2);text-transform:uppercase;letter-spacing:.07em}
+.week-body{display:flex;align-items:baseline;gap:10px;margin-top:4px}
+.week-amt{font-size:24px;font-weight:700;color:var(--lbl);letter-spacing:-.5px}
+.week-delta{font-size:11px;font-weight:700}
+.week-sub{font-size:11px;color:var(--lbl2);margin-top:3px}
+
+/* CATEGORY FILTER */
+.filter-wrap{display:flex;gap:7px;padding:8px 16px 4px;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.filter-wrap::-webkit-scrollbar{display:none}
+.fchip{flex-shrink:0;padding:6px 14px;border-radius:20px;border:.5px solid var(--sep);
+  background:var(--card);color:var(--lbl);font-size:13px;font-weight:500;
+  font-family:inherit;cursor:pointer;white-space:nowrap;transition:all .15s}
+.fchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* RECURRING BADGE */
+.freq-badge{display:inline-flex;align-items:center;background:var(--fill2);
+  color:var(--lbl2);font-size:9px;font-weight:700;padding:1px 5px;
+  border-radius:6px;margin-left:5px;vertical-align:middle;letter-spacing:.02em}
+
+/* RESULT COUNT */
+.result-count{font-size:12px;color:var(--lbl2);padding:4px 16px 0;font-weight:500}
 </style>
 </head>
 <body>
