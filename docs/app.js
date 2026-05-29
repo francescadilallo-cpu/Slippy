@@ -26,7 +26,7 @@ const state = {
   tab: 'd',
   dashMonth: new Date(),
   receipts: [],
-  settings: { apiKey: '' },
+  settings: { apiKey: '', budget: 0 },
   learned: {},
   ocrData: null,
   detailId: null,
@@ -41,10 +41,11 @@ function persist() {
 function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
-    state.settings = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
+    const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
+    state.settings = Object.assign({ apiKey: '', budget: 0 }, saved);
     state.learned  = JSON.parse(localStorage.getItem('slippy_learned')  || '{}');
   } catch(_) {
-    state.receipts = []; state.settings = { apiKey:'' }; state.learned = {};
+    state.receipts = []; state.settings = { apiKey: '', budget: 0 }; state.learned = {};
   }
 }
 function saveSettings() { localStorage.setItem('slippy_settings', JSON.stringify(state.settings)); }
@@ -52,7 +53,7 @@ function saveLearned()  { localStorage.setItem('slippy_learned',  JSON.stringify
 
 // ── HELPERS ───────────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-function fmt(n) { return '€ ' + Number(n || 0).toFixed(2).replace('.', ','); }
+function fmt(n) { return '€ ' + Number(n || 0).toFixed(2).replace('.', ','); }
 function fmtDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
@@ -97,6 +98,53 @@ function groupByDate(receipts) {
     groups[g].push(r);
   });
   return order.map(k => [k, groups[k]]);
+}
+
+// ── HAPTIC FEEDBACK ───────────────────────────────────────────
+function haptic(type = 'light') {
+  if (!navigator.vibrate) return;
+  const patterns = { light: [8], medium: [20], heavy: [40] };
+  if (patterns[type]) navigator.vibrate(patterns[type]);
+}
+
+// ── BOTTOM SHEET ──────────────────────────────────────────────
+function openSheet(html) {
+  const body = document.getElementById('sht-body');
+  const sht  = document.getElementById('sht');
+  const sbd  = document.getElementById('sbd');
+  body.innerHTML = html;
+  // force reflow
+  sht.getBoundingClientRect();
+  sht.classList.add('on');
+  sbd.classList.add('on');
+}
+
+function closeSheet() {
+  const sht = document.getElementById('sht');
+  const sbd = document.getElementById('sbd');
+  sht.classList.remove('on');
+  sbd.classList.remove('on');
+  setTimeout(() => {
+    document.getElementById('sht-body').innerHTML = '';
+  }, 360);
+}
+
+// ── OVERLAY TRANSITIONS ───────────────────────────────────────
+function openOverlay(id, html) {
+  const el = document.getElementById(id);
+  el.innerHTML = html;
+  // force reflow for transition
+  el.getBoundingClientRect();
+  el.classList.add('on');
+}
+
+function closeOverlay(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('on');
+  setTimeout(() => {
+    el.innerHTML = '';
+    if (id === 'oscanner') state.ocrData = null;
+  }, 300);
 }
 
 // ── CATEGORIZE ────────────────────────────────────────────────
@@ -199,10 +247,9 @@ function fileToDataURL(file) {
 
 // ── OCR PIPELINE ─────────────────────────────────────────────
 async function runOCR(file) {
-  const overlay = document.getElementById('oscanner');
-  const imgURL  = await fileToDataURL(file);
-
-  overlay.innerHTML = processingScreenHTML(0);
+  const imgURL = await fileToDataURL(file);
+  const html   = processingScreenHTML(0);
+  openOverlay('oscanner', html);
 
   const worker = await Tesseract.createWorker(['ita', 'eng'], 1, {
     logger: m => {
@@ -259,7 +306,7 @@ function renderOCRPreview(parsed, imgURL) {
 
   overlay.innerHTML = `
   <div class="nav-row">
-    <button class="back-btn" onclick="renderScannerPicker()">‹ Back</button>
+    <button class="back-btn" onclick="renderScannerPickerOverlay()">‹ Back</button>
     <h2>Confirm</h2>
     <button class="nav-act" onclick="saveReceiptFromForm()">Save</button>
   </div>
@@ -301,11 +348,29 @@ function renderOCRPreview(parsed, imgURL) {
   </div>`;
 }
 
+// ── DUPLICATE DETECTION ───────────────────────────────────────
+function isDuplicate(name, total) {
+  const now = Date.now();
+  const window48h = 48 * 60 * 60 * 1000;
+  return state.receipts.some(r => {
+    const age = now - new Date(r.createdAt || r.date).getTime();
+    if (age > window48h) return false;
+    const sameName = (r.storeName || '').toLowerCase() === (name || '').toLowerCase();
+    const pct = r.totalAmount > 0 ? Math.abs(r.totalAmount - total) / r.totalAmount : 1;
+    return sameName && pct <= 0.05;
+  });
+}
+
 function saveReceiptFromForm() {
   const name  = (document.getElementById('fn')?.value || '').trim() || 'Store';
   const total = parseFloat(document.getElementById('ft')?.value || '0') || 0;
   const date  = document.getElementById('fd')?.value || new Date().toISOString().split('T')[0];
   const catId = document.getElementById('fc')?.value || 'other';
+
+  // Duplicate detection
+  if (isDuplicate(name, total)) {
+    if (!confirm('Sembra un duplicato. Salvare comunque?')) return;
+  }
 
   const items = [];
   let i = 0;
@@ -328,6 +393,7 @@ function saveReceiptFromForm() {
   persist();
   if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
 
+  haptic('medium');
   closeOverlay('oscanner');
   toast('Receipt saved!');
   renderDashboard();
@@ -336,6 +402,7 @@ function saveReceiptFromForm() {
 
 // ── NAVIGATION ────────────────────────────────────────────────
 function gotoTab(t) {
+  haptic('light');
   state.tab = t;
   const ids = ['d', 'r', 's'];
   ids.forEach(id => document.getElementById('v' + id).classList.toggle('on', id === t));
@@ -346,26 +413,34 @@ function gotoTab(t) {
 }
 
 function openScanner() {
-  document.getElementById('oscanner').classList.add('on');
+  haptic('light');
   renderScannerPicker();
 }
 
-function openDetail(id) {
-  state.detailId = id;
-  document.getElementById('odetail').classList.add('on');
-  renderReceiptDetail(id);
-}
-
-function closeOverlay(id) {
-  const el = document.getElementById(id);
-  el.classList.remove('on');
-  el.innerHTML = '';
-  if (id === 'oscanner') state.ocrData = null;
-}
-
-// ── RENDER: SCANNER PICKER ────────────────────────────────────
 function renderScannerPicker() {
-  document.getElementById('oscanner').innerHTML = `
+  const html = `
+  <div style="padding:4px 16px 16px">
+    <div style="font-size:17px;font-weight:700;text-align:center;margin-bottom:16px;color:var(--lbl)">Aggiungi Scontrino</div>
+    <div class="scan-btns">
+      <button class="btn btn-p" onclick="closeSheet();triggerCapture(true)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Usa Fotocamera
+      </button>
+      <button class="btn btn-s" onclick="closeSheet();triggerCapture(false)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Scegli dalla Libreria
+      </button>
+    </div>
+    <p style="font-size:12px;color:var(--lbl2);margin-top:12px;line-height:1.6;text-align:center">
+      OCR elaborato nel browser — nessun upload, completamente privato.
+    </p>
+  </div>`;
+  openSheet(html);
+}
+
+// Helper: open scanner overlay after sheet is closed (called from file input)
+function renderScannerPickerOverlay() {
+  const html = `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
     <h2>Add Receipt</h2><div style="min-width:56px"></div>
@@ -380,6 +455,7 @@ function renderScannerPicker() {
       OCR runs in-browser — no upload, fully private.
     </p>
   </div>`;
+  openOverlay('oscanner', html);
 }
 
 function triggerCapture(camera) {
@@ -387,6 +463,213 @@ function triggerCapture(camera) {
   if (camera) fi.setAttribute('capture', 'environment');
   else        fi.removeAttribute('capture');
   fi.click();
+}
+
+function openDetail(id) {
+  haptic('light');
+  state.detailId = id;
+  const html = buildDetailHTML(id);
+  if (!html) return;
+  openOverlay('odetail', html);
+}
+
+// ── SWIPE-TO-DELETE ───────────────────────────────────────────
+function setupSwipe() {
+  document.querySelectorAll('.rx-wrap .lrow').forEach(lrow => {
+    let startX = 0, currentX = 0, dragging = false;
+
+    lrow.addEventListener('touchstart', e => {
+      startX = e.touches[0].clientX;
+      currentX = 0;
+      dragging = true;
+      lrow.style.transition = 'none';
+    }, { passive: true });
+
+    lrow.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const dx = e.touches[0].clientX - startX;
+      currentX = Math.min(0, dx); // only left
+      lrow.style.transform = `translateX(${currentX}px)`;
+    }, { passive: true });
+
+    lrow.addEventListener('touchend', () => {
+      if (!dragging) return;
+      dragging = false;
+      lrow.style.transition = 'transform .25s ease';
+      if (currentX < -60) {
+        lrow.style.transform = 'translateX(-80px)';
+        lrow.dataset.revealed = '1';
+        haptic('medium');
+      } else {
+        lrow.style.transform = 'translateX(0)';
+        lrow.dataset.revealed = '0';
+      }
+    });
+  });
+}
+
+function handleRowTap(id) {
+  // Find the lrow for this id
+  const lrow = document.querySelector(`.lrow[data-id="${id}"]`);
+  if (lrow && lrow.dataset.revealed === '1') {
+    // Close the revealed state on tap
+    lrow.style.transition = 'transform .25s ease';
+    lrow.style.transform = 'translateX(0)';
+    lrow.dataset.revealed = '0';
+    return;
+  }
+  openDetail(id);
+}
+
+function quickDelete(id) {
+  haptic('heavy');
+  if (!confirm('Eliminare questo scontrino?')) return;
+  state.receipts = state.receipts.filter(x => x.id !== id);
+  persist();
+  toast('Scontrino eliminato');
+  renderDashboard();
+  renderReceipts();
+}
+
+// ── MONTHLY TOTALS FOR SPARKLINE ──────────────────────────────
+function getMonthlyTotals(n) {
+  const now = new Date();
+  const result = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const rx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), d));
+    const total = rx.reduce((s, r) => s + (r.totalAmount || 0), 0);
+    const label = d.toLocaleDateString('it-IT', { month:'short' }).replace('.', '');
+    result.push({ label, total, isCurrent: i === 0 });
+  }
+  return result;
+}
+
+function sparklineSVG(data) {
+  const W = 280, H = 70, pad = 4;
+  const max = Math.max(...data.map(d => d.total), 1);
+  const barW = Math.floor((W - pad * (data.length + 1)) / data.length);
+  let bars = '';
+  let labels = '';
+  data.forEach((d, i) => {
+    const x = pad + i * (barW + pad);
+    const barH = Math.max(4, Math.round((d.total / max) * (H - 20)));
+    const y = H - 16 - barH;
+    const color = d.isCurrent ? 'var(--accent)' : 'var(--fill2)';
+    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${color}"/>`;
+    labels += `<text x="${x + barW / 2}" y="${H - 2}" text-anchor="middle" font-size="9" fill="var(--lbl2)" font-family="-apple-system,sans-serif">${d.label}</text>`;
+  });
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${bars}${labels}</svg>`;
+}
+
+// ── SMART INSIGHTS ────────────────────────────────────────────
+function calcInsights(thisRx, prevRx, mo) {
+  const insights = [];
+
+  // 1. Confronto con mese precedente
+  const thisTotal = thisRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
+  const prevTotal = prevRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
+  if (prevTotal > 0 && thisTotal > 0) {
+    const diff = ((thisTotal - prevTotal) / prevTotal * 100).toFixed(0);
+    const sign = diff > 0 ? 'in più' : 'in meno';
+    const color = diff > 0 ? 'var(--red)' : 'var(--green)';
+    insights.push({ color, text: `Stai spendendo ${Math.abs(diff)}% ${sign} rispetto al mese scorso` });
+  }
+
+  // 2. Categoria dominante
+  if (thisRx.length > 0) {
+    const catTotals = {};
+    thisRx.forEach(r => { catTotals[r.category] = (catTotals[r.category] || 0) + (r.totalAmount || 0); });
+    const top = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+    if (top && thisTotal > 0) {
+      const pct = Math.round(top[1] / thisTotal * 100);
+      const cat = catById(top[0]);
+      if (pct >= 25) {
+        insights.push({ color: cat.color, text: `${cat.name} è il ${pct}% della tua spesa questo mese` });
+      }
+    }
+  }
+
+  // 3. Forecast se a metà mese
+  const now = new Date();
+  if (sameMonth(now, mo) && thisRx.length >= 2) {
+    const dayOfMonth = now.getDate();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    if (dayOfMonth >= 5 && dayOfMonth <= daysInMonth - 3) {
+      const forecast = Math.round((thisTotal / dayOfMonth) * daysInMonth);
+      insights.push({ color: 'var(--accent)', text: `Al ritmo attuale spenderai circa ${fmt(forecast)} questo mese` });
+    }
+  }
+
+  // 4. Negozio più visitato
+  if (thisRx.length >= 2) {
+    const storeCounts = {};
+    thisRx.forEach(r => { const s = r.storeName || 'Store'; storeCounts[s] = (storeCounts[s] || 0) + 1; });
+    const topStore = Object.entries(storeCounts).sort((a, b) => b[1] - a[1])[0];
+    if (topStore && topStore[1] >= 2) {
+      insights.push({ color: 'var(--purple)', text: `${topStore[0]}: ${topStore[1]} visite questo mese` });
+    }
+  }
+
+  return insights.slice(0, 3);
+}
+
+// ── RENDER: BUDGET SECTION ────────────────────────────────────
+function renderBudgetSection(spent, budget) {
+  if (!budget || budget <= 0) return '';
+  const pct = Math.min(100, Math.round(spent / budget * 100));
+  const remaining = budget - spent;
+  const overBudget = spent > budget;
+  const barColor = pct < 70 ? 'var(--green)' : pct < 90 ? 'var(--orange)' : 'var(--red)';
+  const remainText = overBudget
+    ? `<span style="color:var(--red);font-weight:700">Over budget</span>`
+    : `${fmt(remaining)} rimanenti`;
+
+  return `
+  <div class="card budget-wrap">
+    <div class="budget-top">
+      <div>
+        <div class="budget-lbl">Budget Mensile</div>
+        <div class="budget-remain">${remainText}</div>
+      </div>
+      <div class="budget-pct" style="color:${barColor}">${pct}%</div>
+    </div>
+    <div class="budget-track">
+      <div class="budget-fill" style="width:${pct}%;background:${barColor}"></div>
+    </div>
+    <div class="budget-sub">
+      <span>${fmt(spent)} spesi</span>
+      <span>su ${fmt(budget)}</span>
+    </div>
+  </div>`;
+}
+
+// ── RENDER: INSIGHTS SECTION ──────────────────────────────────
+function renderInsightsSection(insights) {
+  if (!insights || insights.length === 0) return '';
+  const rows = insights.map(ins => `
+    <div class="insight-row">
+      <div class="insight-dot" style="background:${ins.color}"></div>
+      <div class="insight-txt">${esc(ins.text)}</div>
+    </div>`).join('');
+  return `
+  <div class="card insight-wrap">
+    <div class="insight-hdr">Smart Insights</div>
+    ${rows}
+  </div>`;
+}
+
+// ── RENDER: SPARKLINE SECTION ─────────────────────────────────
+function renderSparkSection(data) {
+  const hasData = data.some(d => d.total > 0);
+  if (!hasData) return '';
+  return `
+  <div class="card spark-wrap">
+    <div class="spark-hdr">
+      <span class="spark-title">Ultimi 6 Mesi</span>
+    </div>
+    ${sparklineSVG(data)}
+  </div>`;
 }
 
 // ── RENDER: DASHBOARD ─────────────────────────────────────────
@@ -437,6 +720,13 @@ function renderDashboard() {
     <p>Tap <strong>＋</strong> to scan your first receipt and start tracking your spending.</p>
   </div>` : '';
 
+  // Budget, Insights, Sparkline
+  const budgetSection  = renderBudgetSection(total, state.settings.budget || 0);
+  const insights       = calcInsights(thisRx, prevRx, mo);
+  const insightSection = renderInsightsSection(insights);
+  const sparkData      = getMonthlyTotals(6);
+  const sparkSection   = renderSparkSection(sparkData);
+
   el.innerHTML = `
   <div class="nav"><h1>Dashboard</h1></div>
   <div class="mpick">
@@ -454,6 +744,9 @@ function renderDashboard() {
       <div class="sp"><div class="sp-v">${catRows.length}</div><div class="sp-l">Categories</div></div>
     </div>
   </div>
+  ${budgetSection}
+  ${insightSection}
+  ${sparkSection}
   ${chartSection}
   ${emptyState}
   <div class="pad"></div>`;
@@ -492,20 +785,23 @@ function renderReceipts(q) {
     </div>`;
   } else {
     groupByDate(list).forEach(([grp, rows]) => {
-      bodyHTML += `<div class="sec"><div class="sec-hdr">${esc(grp)}</div>`;
+      bodyHTML += `<div class="sec"><div class="sec-hdr">${esc(grp)}</div><div class="sec-list">`;
       rows.forEach(r => {
         const cat = catById(r.category);
         bodyHTML += `
-        <div class="lrow" onclick="openDetail('${r.id}')">
-          <div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>
-          <div class="ri">
-            <div class="rn">${esc(r.storeName || 'Store')}</div>
-            <div class="rs">${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}</div>
+        <div class="rx-wrap">
+          <div class="rx-del-btn" onclick="quickDelete('${r.id}')"><span>Elimina</span></div>
+          <div class="lrow" data-id="${r.id}" onclick="handleRowTap('${r.id}')">
+            <div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>
+            <div class="ri">
+              <div class="rn">${esc(r.storeName || 'Store')}</div>
+              <div class="rs">${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}</div>
+            </div>
+            <div class="ra">${fmt(r.totalAmount || 0)}</div>
           </div>
-          <div class="ra">${fmt(r.totalAmount || 0)}</div>
         </div>`;
       });
-      bodyHTML += `</div>`;
+      bodyHTML += `</div></div>`;
     });
   }
 
@@ -517,13 +813,14 @@ function renderReceipts(q) {
   </div>
   ${bodyHTML}
   <div class="pad"></div>`;
+
+  setupSwipe();
 }
 
 // ── RENDER: RECEIPT DETAIL ────────────────────────────────────
-function renderReceiptDetail(id) {
+function buildDetailHTML(id) {
   const r = state.receipts.find(x => x.id === id);
-  if (!r) { closeOverlay('odetail'); return; }
-  const overlay = document.getElementById('odetail');
+  if (!r) return null;
 
   const chipsHTML = CATS.map(c => `
   <button class="chip ${c.id === r.category ? 'sel' : ''}"
@@ -556,7 +853,7 @@ function renderReceiptDetail(id) {
     : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Get a personalized saving tip for this receipt.</p>
        <button class="ai-btn" onclick="fetchTip('${id}')">Get tip</button>`;
 
-  overlay.innerHTML = `
+  return `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('odetail')">‹ Back</button>
     <h2>Receipt</h2>
@@ -587,6 +884,12 @@ function renderReceiptDetail(id) {
   </div>`;
 }
 
+function renderReceiptDetail(id) {
+  const html = buildDetailHTML(id);
+  if (!html) { closeOverlay('odetail'); return; }
+  document.getElementById('odetail').innerHTML = html;
+}
+
 function setCategory(id, catId) {
   const r = state.receipts.find(x => x.id === id);
   if (!r) return;
@@ -600,6 +903,7 @@ function setCategory(id, catId) {
 }
 
 function confirmDelete(id) {
+  haptic('heavy');
   if (!confirm('Delete this receipt? This cannot be undone.')) return;
   state.receipts = state.receipts.filter(x => x.id !== id);
   persist();
@@ -615,8 +919,20 @@ function renderSettings() {
   const el    = document.getElementById('vs');
   const count = state.receipts.length;
   const key   = state.settings.apiKey || '';
+  const budget = state.settings.budget || 0;
   el.innerHTML = `
   <div class="nav"><h1>Settings</h1></div>
+  <div class="ssel">
+    <div class="sshdr">Budget Mensile</div>
+    <div class="srow" style="border-radius:var(--r)">
+      <span class="slbl">€ Budget</span>
+      <input class="kinp" id="budgetInp" type="number" min="0" step="10"
+        placeholder="0" value="${budget > 0 ? budget : ''}"
+        style="text-align:right;font-size:15px;font-family:inherit;color:var(--accent)"/>
+    </div>
+    <div class="snote">Imposta un budget mensile per monitorare la spesa nella Dashboard.</div>
+    <button class="btn btn-p" style="margin-top:8px" onclick="saveBudget()">Salva Budget</button>
+  </div>
   <div class="ssel">
     <div class="sshdr">Claude API Key</div>
     <div class="srow" style="flex-direction:column;align-items:stretch;gap:10px;padding:14px 16px">
@@ -646,7 +962,7 @@ function renderSettings() {
   </div>
   <div class="ssel">
     <div class="sshdr">About</div>
-    <div class="srow"><span class="slbl">Version</span><span class="sval">1.0 PWA</span></div>
+    <div class="srow"><span class="slbl">Version</span><span class="sval">1.1 PWA</span></div>
     <div class="srow"><span class="slbl">OCR Engine</span><span class="sval">Tesseract.js 5</span></div>
     <div class="srow"><span class="slbl">AI Model</span><span class="sval">Claude Sonnet</span></div>
     <div class="srow"><span class="slbl">Languages</span><span class="sval">Italian · English</span></div>
@@ -655,6 +971,16 @@ function renderSettings() {
     </div>
   </div>
   <div class="pad"></div>`;
+}
+
+function saveBudget() {
+  const v = parseFloat(document.getElementById('budgetInp')?.value || '0') || 0;
+  state.settings.budget = v;
+  saveSettings();
+  haptic('medium');
+  toast(v > 0 ? `Budget impostato: ${fmt(v)}/mese` : 'Budget rimosso');
+  renderSettings();
+  renderDashboard();
 }
 
 function toggleKeyVis() {
@@ -773,12 +1099,12 @@ function init() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    const overlay = document.getElementById('oscanner');
-    overlay.classList.add('on');
+    // Sheet should be closing (was triggered by triggerCapture inside closeSheet callback)
+    // Open scanner overlay with OCR
     try {
       await runOCR(file);
     } catch (err) {
-      overlay.innerHTML = `
+      openOverlay('oscanner', `
       <div class="nav-row">
         <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
         <h2>Error</h2><div style="min-width:56px"></div>
@@ -789,9 +1115,12 @@ function init() {
         <p>${esc(err.message || 'Could not read the image.')}</p>
         <button class="btn btn-s" style="width:200px;margin-top:8px"
           onclick="closeOverlay('oscanner');openScanner()">Try Again</button>
-      </div>`;
+      </div>`);
     }
   });
+
+  // FAB haptic
+  document.getElementById('fab').addEventListener('click', () => haptic('light'));
 
   renderDashboard();
 
