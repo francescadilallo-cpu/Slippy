@@ -117,6 +117,51 @@ function animateCount(el, target) {
   requestAnimationFrame(step);
 }
 
+// ── SHARE RECEIPT ────────────────────────────────────────────
+async function shareReceipt(id) {
+  const r = state.receipts.find(x => x.id === id);
+  if (!r) return;
+  const cat = catById(r.category);
+  const text = [
+    `${cat.icon} ${r.storeName || 'Store'}`,
+    `${fmtDate(r.date || r.createdAt)} · ${cat.name}`,
+    `Totale: ${fmt(r.totalAmount || 0)}`,
+    r.note ? `📝 ${r.note}` : '',
+  ].filter(Boolean).join('\n');
+
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Slippy', text }); haptic('light'); }
+    catch(e) { if (e.name !== 'AbortError') toast('Impossibile condividere'); }
+  } else {
+    try { await navigator.clipboard.writeText(text); toast('Copiato negli appunti!'); }
+    catch(e) { toast('Condivisione non supportata'); }
+  }
+}
+
+// ── FORECAST ─────────────────────────────────────────────────
+function renderForecastSection(thisRx, mo) {
+  const now = new Date();
+  if (!sameMonth(now, mo) || thisRx.length < 3) return '';
+  const day = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft = daysInMonth - day;
+  if (daysLeft <= 1) return '';
+  const total = thisRx.reduce((s, r) => s + (r.totalAmount||0), 0);
+  const projected = Math.round((total / day) * daysInMonth);
+  const budget = state.settings.budget || 0;
+  const overBudget = budget > 0 && projected > budget;
+  const color = overBudget ? 'var(--red)' : 'var(--accent)';
+  return `
+  <div class="card forecast-card">
+    <div class="forecast-lbl">Proiezione Fine Mese</div>
+    <div class="forecast-amt" style="color:${color}">${fmt(projected)}</div>
+    <div class="forecast-sub">
+      ${fmt(Math.round((total / day) * daysLeft))} nei prossimi ${daysLeft} giorni
+      ${overBudget ? `<span style="color:var(--red);font-weight:600"> · sopra budget</span>` : ''}
+    </div>
+  </div>`;
+}
+
 // ── STREAK ───────────────────────────────────────────────────
 function calcStreak() {
   if (!state.receipts.length) return 0;
@@ -1061,9 +1106,14 @@ function renderDashboard() {
          <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">Analizza questo mese →</button>`}
   </div>` : '';
 
+  const forecastSection = renderForecastSection(thisRx, mo);
+
   el.innerHTML = `
-  <div class="nav" style="display:flex;justify-content:space-between;align-items:baseline">
-    <h1>Dashboard</h1>
+  <div class="nav brand-nav">
+    <div class="brand-row">
+      <div class="brand-ico-wrap"><span class="brand-ico">S</span></div>
+      <span class="brand-name">slippy</span>
+    </div>
     ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}gg</span>` : ''}
   </div>
   <div class="card spend-card">
@@ -1081,6 +1131,7 @@ function renderDashboard() {
       <div class="sp"><div class="sp-v">${catRows.length}</div><div class="sp-l">Categorie</div></div>
     </div>
   </div>
+  ${forecastSection}
   ${weekSection}
   ${budgetSection}
   ${insightSection}
@@ -1181,8 +1232,21 @@ function renderReceipts(q) {
     });
   }
 
+  const thisMonthRx = state.receipts.filter(r => {
+    const d = new Date(r.date || r.createdAt);
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  const thisMonthTotal = thisMonthRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
+  const totalLine = state.receipts.length > 0
+    ? `<span class="rx-month-total">${fmt(thisMonthTotal)} questo mese</span>`
+    : '';
+
   el.innerHTML = `
-  <div class="nav"><h1>Scontrini</h1></div>
+  <div class="nav" style="display:flex;justify-content:space-between;align-items:baseline">
+    <h1>Scontrini</h1>
+    ${totalLine}
+  </div>
   <div class="search-wrap">
     <input class="search-inp" placeholder="Cerca scontrini…"
       value="${esc(state.searchQ)}" oninput="renderReceipts(this.value)"/>
@@ -1235,7 +1299,16 @@ function buildDetailHTML(id) {
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('odetail')">‹ Indietro</button>
     <h2>Scontrino</h2>
-    <button class="nav-act" onclick="showEditForm('${id}')">Modifica</button>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="back-btn share-btn" onclick="shareReceipt('${id}')" title="Condividi">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+      </button>
+      <button class="nav-act" onclick="showEditForm('${id}')">Modifica</button>
+    </div>
   </div>
   <div style="padding-bottom:48px">
     ${r.imageDataURL ? `<img src="${r.imageDataURL}" class="img-thumb" style="margin:12px auto;cursor:zoom-in" onclick="openImage('${id}')"/>` : ''}
@@ -1320,7 +1393,7 @@ function renderSettings() {
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <div style="display:flex;gap:8px">
         <button class="btn btn-s" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
-          onclick="toggleKeyVis()">Show / Hide</button>
+          onclick="toggleKeyVis()">Mostra / Nascondi</button>
         <button class="btn btn-p" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
           onclick="saveApiKey()">Save</button>
       </div>
@@ -1341,10 +1414,10 @@ function renderSettings() {
   </div>
   <div class="ssel">
     <div class="sshdr">Info</div>
-    <div class="srow"><span class="slbl">Version</span><span class="sval">1.1 PWA</span></div>
-    <div class="srow"><span class="slbl">OCR Engine</span><span class="sval">Tesseract.js 5</span></div>
-    <div class="srow"><span class="slbl">AI Model</span><span class="sval">Claude Sonnet</span></div>
-    <div class="srow"><span class="slbl">Languages</span><span class="sval">Italian · English</span></div>
+    <div class="srow"><span class="slbl">Versione</span><span class="sval">2.0 PWA</span></div>
+    <div class="srow"><span class="slbl">Motore OCR</span><span class="sval">Tesseract.js 5</span></div>
+    <div class="srow"><span class="slbl">Modello AI</span><span class="sval">Claude Sonnet</span></div>
+    <div class="srow"><span class="slbl">Lingue</span><span class="sval">Italiano · Inglese</span></div>
     <div class="snote" style="text-align:center;padding:16px 4px;color:var(--lbl3)">
       Snap your slip. Know your spending.
     </div>
