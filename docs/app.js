@@ -4,21 +4,21 @@
 
 // ── CATEGORIES ───────────────────────────────────────────────
 const CATS = [
-  { id:'groceries',   name:'Groceries',   icon:'🛒', color:'#30D158',
+  { id:'groceries',   name:'Alimentari',    icon:'🛒', color:'#30D158',
     kw:['supermercato','esselunga','carrefour','coop','lidl','aldi','pam','despar','conad','sigma','bennet','sma','grocery','market'] },
-  { id:'restaurants', name:'Restaurants', icon:'🍽️', color:'#FF9500',
+  { id:'restaurants', name:'Ristoranti',    icon:'🍽️', color:'#FF9500',
     kw:['ristorante','trattoria','osteria','pizzeria','bar ','caffè','café','restaurant','bistro','mcdonald','burger','kebab','sushi'] },
-  { id:'pharmacy',    name:'Pharmacy',    icon:'💊', color:'#FF3B30',
+  { id:'pharmacy',    name:'Farmacia',      icon:'💊', color:'#FF3B30',
     kw:['farmacia','pharmacy','parafarmacia','medical','salute','sanitá'] },
-  { id:'fuel',        name:'Fuel',        icon:'⛽', color:'#FF6B00',
+  { id:'fuel',        name:'Carburante',    icon:'⛽', color:'#FF6B00',
     kw:['eni','agip','q8','ip ','shell','tamoil','total','benzina','carburante','fuel','petrol'] },
-  { id:'shopping',    name:'Shopping',    icon:'🛍️', color:'#007AFF',
+  { id:'shopping',    name:'Shopping',      icon:'🛍️', color:'#007AFF',
     kw:['amazon','zalando','h&m','zara','ikea','obi','leroy','bricofer','brico','shopping'] },
-  { id:'clothing',    name:'Clothing',    icon:'👗', color:'#AF52DE',
+  { id:'clothing',    name:'Abbigliamento', icon:'👗', color:'#AF52DE',
     kw:['abbigliamento','moda','clothing','fashion','boutique','sartoria','calzature'] },
-  { id:'electronics', name:'Electronics', icon:'📱', color:'#5856D6',
+  { id:'electronics', name:'Elettronica',   icon:'📱', color:'#5856D6',
     kw:['mediaworld','euronics','unieuro','apple','fnac','trony','electronics','informatica','tech'] },
-  { id:'other',       name:'Other',       icon:'📁', color:'#8E8E93', kw:[] },
+  { id:'other',       name:'Altro',         icon:'📁', color:'#8E8E93', kw:[] },
 ];
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -33,6 +33,7 @@ const state = {
   searchQ: '',
   filterCat: null,
   aiTips: {},
+  monthlyAnalysis: {},
 };
 
 // ── STORAGE ───────────────────────────────────────────────────
@@ -114,6 +115,75 @@ function animateCount(el, target) {
     else el.textContent = fmt(target);
   }
   requestAnimationFrame(step);
+}
+
+// ── STREAK ───────────────────────────────────────────────────
+function calcStreak() {
+  if (!state.receipts.length) return 0;
+  const days = new Set(state.receipts.map(r =>
+    r.date || new Date(r.createdAt).toISOString().split('T')[0]
+  ));
+  let streak = 0;
+  const d = new Date();
+  while (true) {
+    const ds = d.toISOString().split('T')[0];
+    if (days.has(ds)) { streak++; d.setDate(d.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
+// ── AI MONTHLY ANALYSIS ───────────────────────────────────────
+async function fetchMonthlyAnalysis(monthKey) {
+  const key = state.settings.apiKey;
+  if (!key) { toast('Aggiungi la tua API key Claude nelle Impostazioni'); return; }
+
+  state.monthlyAnalysis[monthKey] = { loading: true };
+  const card = document.getElementById('dash-ai-card');
+  if (card) card.innerHTML = `
+    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Analisi Mensile AI</h3><span class="ai-badge">Claude</span></div>
+    <div class="spin" style="width:26px;height:26px;border-width:3px;margin:12px auto"></div>`;
+
+  try {
+    const [y, m] = monthKey.split('-').map(Number);
+    const mo = new Date(y, m, 1);
+    const rx = state.receipts.filter(r => sameMonth(new Date(r.date||r.createdAt), mo));
+    const total = rx.reduce((s, r) => s + (r.totalAmount||0), 0);
+    const catMap = {};
+    rx.forEach(r => { catMap[r.category] = (catMap[r.category]||0) + (r.totalAmount||0); });
+    const catLines = Object.entries(catMap).sort((a,b)=>b[1]-a[1])
+      .map(([k,v]) => `${catById(k).icon} ${catById(k).name}: ${fmt(v)}`).join(', ');
+
+    const prompt = `Sei un consulente finanziario. Analizza queste spese di ${monthLabel(mo)} in italiano e rispondi con esattamente 3 bullet point (•) brevi e pratici, max 80 parole totali:
+Totale: ${fmt(total)} | ${rx.length} scontrini | ${catLines}`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 200,
+        messages: [{ role:'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.error?.message||`API ${res.status}`); }
+    const data = await res.json();
+    const text = data.content?.[0]?.text?.trim() || '';
+    state.monthlyAnalysis[monthKey] = { text };
+    renderDashboard();
+  } catch(err) {
+    state.monthlyAnalysis[monthKey] = null;
+    if (card) card.innerHTML = `
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Analisi Mensile AI</h3><span class="ai-badge">Claude</span></div>
+      <p style="font-size:13px;color:var(--red);margin-bottom:8px">${esc(err.message)}</p>
+      <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">Riprova</button>`;
+  }
 }
 
 // ── HAPTIC FEEDBACK ───────────────────────────────────────────
@@ -975,8 +1045,27 @@ function renderDashboard() {
   const sparkData      = getMonthlyTotals(6);
   const sparkSection   = renderSparkSection(sparkData);
 
+  const streak = calcStreak();
+  const monthKey = `${mo.getFullYear()}-${mo.getMonth()}`;
+  const cachedAnalysis = state.monthlyAnalysis[monthKey];
+  const aiMonthCard = (state.settings.apiKey && thisRx.length > 0) ? `
+  <div class="card ai-month-card" id="dash-ai-card">
+    <div class="ai-hdr">
+      <span style="font-size:16px">✦</span>
+      <h3>Analisi Mensile AI</h3>
+      <span class="ai-badge">Claude</span>
+    </div>
+    ${cachedAnalysis?.text
+      ? `<p class="ai-tip">${esc(cachedAnalysis.text)}</p>`
+      : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Analisi intelligente delle spese di ${monthLabel(mo)}.</p>
+         <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">Analizza questo mese →</button>`}
+  </div>` : '';
+
   el.innerHTML = `
-  <div class="nav"><h1>Dashboard</h1></div>
+  <div class="nav" style="display:flex;justify-content:space-between;align-items:baseline">
+    <h1>Dashboard</h1>
+    ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}gg</span>` : ''}
+  </div>
   <div class="card spend-card">
     <div class="spend-mrow">
       <button onclick="shiftMonth(-1)" ${prevDisabled}>‹</button>
@@ -997,6 +1086,7 @@ function renderDashboard() {
   ${insightSection}
   ${sparkSection}
   ${chartSection}
+  ${aiMonthCard}
   ${emptyState}
   <div class="pad"></div>`;
 
@@ -1076,10 +1166,12 @@ function renderReceipts(q) {
         <div class="rx-wrap">
           <div class="rx-del-btn" onclick="quickDelete('${r.id}')"><span>Elimina</span></div>
           <div class="lrow" data-id="${r.id}" onclick="handleRowTap('${r.id}')">
-            <div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>
+            ${r.imageDataURL
+              ? `<img src="${r.imageDataURL}" class="rx-thumb"/>`
+              : `<div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>`}
             <div class="ri">
               <div class="rn">${esc(r.storeName || 'Store')}${badge}</div>
-              <div class="rs">${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}${r.note ? `<span class="note-pip"> · 📝</span>` : ''}</div>
+              <div class="rs">${r.imageDataURL ? `${cat.icon} ` : ''}${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}${r.note ? `<span class="note-pip"> · 📝</span>` : ''}</div>
             </div>
             <div class="ra">${fmt(r.totalAmount || 0)}</div>
           </div>
