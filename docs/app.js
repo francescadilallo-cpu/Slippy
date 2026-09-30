@@ -148,7 +148,34 @@ function closeOverlay(id) {
   }, 300);
 }
 
+// ── IMAGE FULLSCREEN ─────────────────────────────────────────
+function openImage(receiptId) {
+  const r = state.receipts.find(x => x.id === receiptId);
+  if (!r?.imageDataURL) return;
+  const el = document.getElementById('oimg');
+  el.innerHTML = `
+    <img src="${r.imageDataURL}"
+      style="max-width:100%;max-height:100%;object-fit:contain;touch-action:manipulation"
+      onclick="closeImage()"/>
+    <button onclick="closeImage()"
+      style="position:absolute;top:calc(env(safe-area-inset-top,44px)+12px);right:16px;
+             background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:none;
+             color:#fff;width:36px;height:36px;border-radius:50%;font-size:16px;
+             cursor:pointer;display:flex;align-items:center;justify-content:center;
+             font-family:inherit">✕</button>`;
+  el.getBoundingClientRect();
+  el.classList.add('on');
+}
+function closeImage() {
+  document.getElementById('oimg').classList.remove('on');
+}
+
 // ── CATEGORIZE ────────────────────────────────────────────────
+function autoCategory(storeName) {
+  const sel = document.getElementById('mc');
+  if (sel) sel.value = categorize(storeName);
+}
+
 function categorize(storeName) {
   const s = (storeName || '').toLowerCase();
   if (state.learned[s]) return state.learned[s];
@@ -401,6 +428,91 @@ function saveReceiptFromForm() {
   if (state.tab === 'r') renderReceipts();
 }
 
+// ── MANUAL ENTRY ─────────────────────────────────────────────
+function openManualEntry() {
+  haptic('light');
+  const today = new Date().toISOString().split('T')[0];
+  const catsOpt = CATS.map(c =>
+    `<option value="${c.id}" ${c.id === 'groceries' ? 'selected' : ''}>${c.icon} ${c.name}</option>`
+  ).join('');
+  openOverlay('oscanner', `
+  <div class="nav-row">
+    <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
+    <h2>Nuovo Scontrino</h2>
+    <button class="nav-act" onclick="saveManualEntry()">Salva</button>
+  </div>
+  <div style="padding-bottom:40px">
+    <div class="fsec">
+      <div class="fhdr">Negozio</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="mn"
+          placeholder="Nome negozio" oninput="autoCategory(this.value)" autofocus/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Totale</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <span class="flbl">€</span>
+        <input class="finp" id="mt" type="number" step="0.01"
+          placeholder="0.00" inputmode="decimal"/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Data</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" id="md" type="date" value="${today}"/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Categoria</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <select class="finp" id="mc">${catsOpt}</select>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Note (opzionale)</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="mnote"
+          placeholder="Aggiungi una nota…"/>
+      </div>
+    </div>
+    <div class="pad"></div>
+    <button class="btn btn-p" onclick="saveManualEntry()">Salva Scontrino</button>
+    <div class="pad"></div>
+  </div>`);
+}
+
+function saveManualEntry() {
+  const name  = (document.getElementById('mn')?.value || '').trim() || 'Store';
+  const total = parseFloat(document.getElementById('mt')?.value || '0') || 0;
+  const date  = document.getElementById('md')?.value || new Date().toISOString().split('T')[0];
+  const catId = document.getElementById('mc')?.value || 'other';
+  const note  = (document.getElementById('mnote')?.value || '').trim();
+
+  if (!total) { toast('Inserisci il totale'); return; }
+
+  if (isDuplicate(name, total)) {
+    if (!confirm('Sembra un duplicato. Salvare comunque?')) return;
+  }
+
+  const receipt = {
+    id: uid(), storeName: name, totalAmount: total,
+    date, createdAt: new Date().toISOString(),
+    category: catId, items: [], rawText: '', imageDataURL: null,
+    note: note || undefined,
+  };
+
+  state.receipts.unshift(receipt);
+  persist();
+  if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
+
+  haptic('medium');
+  closeOverlay('oscanner');
+  toast('Scontrino salvato!');
+  renderDashboard();
+  if (state.tab === 'r') renderReceipts();
+}
+
 // ── NAVIGATION ────────────────────────────────────────────────
 function gotoTab(t) {
   haptic('light');
@@ -430,6 +542,10 @@ function renderScannerPicker() {
       <button class="btn btn-s" onclick="closeSheet();triggerCapture(false)">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         Scegli dalla Libreria
+      </button>
+      <button class="btn btn-s" onclick="closeSheet();setTimeout(openManualEntry,380)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Inserimento Manuale
       </button>
     </div>
     <p style="font-size:12px;color:var(--lbl2);margin-top:12px;line-height:1.6;text-align:center">
@@ -606,6 +722,13 @@ function showEditForm(id) {
         <select class="finp" id="ec">${catsOpt}</select>
       </div>
     </div>
+    <div class="fsec">
+      <div class="fhdr">Note</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="enote"
+          placeholder="Aggiungi una nota…" value="${esc(r.note||'')}"/>
+      </div>
+    </div>
     <div class="pad"></div>
     <button class="btn btn-p" onclick="saveReceiptEdit('${id}')">Salva Modifiche</button>
     <div class="pad"></div>
@@ -623,6 +746,8 @@ function saveReceiptEdit(id) {
   if (dt) r.date = dt;
   const cat = document.getElementById('ec')?.value;
   if (cat) { r.category = cat; state.learned[(r.storeName||'').toLowerCase()] = cat; saveLearned(); }
+  const noteVal = (document.getElementById('enote')?.value || '').trim();
+  r.note = noteVal || undefined;
   persist();
   haptic('medium');
   toast('Scontrino aggiornato');
@@ -763,10 +888,14 @@ function renderInsightsSection(insights) {
 function renderSparkSection(data) {
   const hasData = data.some(d => d.total > 0);
   if (!hasData) return '';
+  const year = new Date().getFullYear();
+  const yearRx = state.receipts.filter(r => new Date(r.date||r.createdAt).getFullYear() === year);
+  const yearTotal = yearRx.reduce((s,r)=>s+(r.totalAmount||0),0);
   return `
   <div class="card spark-wrap">
     <div class="spark-hdr">
       <span class="spark-title">Ultimi 6 Mesi</span>
+      ${yearTotal > 0 ? `<span style="font-size:12px;font-weight:700;color:var(--lbl)">${fmt(yearTotal)} nel ${year}</span>` : ''}
     </div>
     ${sparklineSVG(data)}
   </div>`;
@@ -994,12 +1123,13 @@ function buildDetailHTML(id) {
     <button class="nav-act" onclick="showEditForm('${id}')">Modifica</button>
   </div>
   <div style="padding-bottom:48px">
-    ${r.imageDataURL ? `<img src="${r.imageDataURL}" class="img-thumb" style="margin:12px auto"/>` : ''}
+    ${r.imageDataURL ? `<img src="${r.imageDataURL}" class="img-thumb" style="margin:12px auto;cursor:zoom-in" onclick="openImage('${id}')"/>` : ''}
     <div class="card det-hdr">
       <div class="det-store">${esc(r.storeName || 'Store')}</div>
       <div class="det-date">${fmtDate(r.date || r.createdAt)}</div>
       <div class="det-total">${fmt(r.totalAmount || 0)}</div>
     </div>
+    ${r.note ? `<div class="det-note">${esc(r.note)}</div>` : ''}
     <div class="det-sec" style="margin-top:14px">
       <h3>Category</h3>
       <div class="chips">${chipsHTML}</div>

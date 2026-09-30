@@ -307,6 +307,16 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 
 /* RESULT COUNT */
 .result-count{font-size:12px;color:var(--lbl2);padding:4px 16px 0;font-weight:500}
+
+/* IMAGE FULLSCREEN */
+.img-ov{position:fixed;inset:0;background:#000;z-index:400;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .22s}
+.img-ov.on{opacity:1;pointer-events:auto}
+
+/* DETAIL NOTE */
+.det-note{margin:8px 16px 0;padding:12px 16px;background:var(--card);
+  border-radius:var(--r);font-size:14px;color:var(--lbl2);line-height:1.6}
 </style>
 </head>
 <body>
@@ -316,6 +326,7 @@ select.finp{-webkit-appearance:none;cursor:pointer}
   <div id="vs" class="view"></div>
   <div id="oscanner" class="overlay"></div>
   <div id="odetail"  class="overlay"></div>
+  <div id="oimg" class="img-ov"></div>
 
   <div id="sbd" class="sbd" onclick="closeSheet()"></div>
   <div id="sht" class="sht">
