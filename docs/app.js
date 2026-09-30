@@ -148,7 +148,36 @@ function closeOverlay(id) {
   }, 300);
 }
 
+// ── IMAGE FULLSCREEN ─────────────────────────────────────────
+function openImage(receiptId) {
+  const r = state.receipts.find(x => x.id === receiptId);
+  if (!r?.imageDataURL) return;
+  const el = document.getElementById('oimg');
+  el.innerHTML = `
+    <img src="${r.imageDataURL}"
+      style="max-width:100%;max-height:100%;object-fit:contain;touch-action:manipulation"
+      onclick="closeImage()"/>
+    <button onclick="closeImage()"
+      style="position:absolute;top:calc(env(safe-area-inset-top,44px)+12px);right:16px;
+             background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border:none;
+             color:#fff;width:36px;height:36px;border-radius:50%;font-size:16px;
+             cursor:pointer;display:flex;align-items:center;justify-content:center;
+             font-family:inherit">✕</button>`;
+  el.getBoundingClientRect();
+  el.classList.add('on');
+}
+function closeImage() {
+  const el = document.getElementById('oimg');
+  el.classList.remove('on');
+  setTimeout(() => { el.innerHTML = ''; }, 250);
+}
+
 // ── CATEGORIZE ────────────────────────────────────────────────
+function autoCategory(storeName) {
+  const sel = document.getElementById('mc');
+  if (sel) sel.value = categorize(storeName);
+}
+
 function categorize(storeName) {
   const s = (storeName || '').toLowerCase();
   if (state.learned[s]) return state.learned[s];
@@ -277,11 +306,11 @@ function processingScreenHTML(pct) {
   return `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-    <h2>Scanning</h2><div style="min-width:56px"></div>
+    <h2>Scansione</h2><div style="min-width:56px"></div>
   </div>
   <div class="processing">
     <div class="spin"></div>
-    <p style="font-size:16px;font-weight:600;color:var(--lbl)">Reading receipt…</p>
+    <p style="font-size:16px;font-weight:600;color:var(--lbl)">Lettura scontrino…</p>
     <div style="width:100%;max-width:260px;height:4px;background:var(--fill2);border-radius:2px;overflow:hidden;margin-top:2px">
       <div class="prog-bar" style="height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:${pct}%"></div>
     </div>
@@ -307,44 +336,44 @@ function renderOCRPreview(parsed, imgURL) {
 
   overlay.innerHTML = `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('oscanner')">‹ Back</button>
-    <h2>Confirm</h2>
-    <button class="nav-act" onclick="saveReceiptFromForm()">Save</button>
+    <button class="back-btn" onclick="closeOverlay('oscanner')">‹ Indietro</button>
+    <h2>Conferma</h2>
+    <button class="nav-act" onclick="saveReceiptFromForm()">Salva</button>
   </div>
   <div style="padding-bottom:40px">
     ${imgURL ? `<img src="${imgURL}" class="img-thumb" style="margin:12px auto"/>` : ''}
     <div class="fsec">
-      <div class="fhdr">Store</div>
+      <div class="fhdr">Negozio</div>
       <div class="frow" style="border-radius:var(--r)">
-        <input class="finp" style="text-align:left;flex:1" id="fn" value="${esc(parsed.storeName)}" placeholder="Store name"/>
+        <input class="finp" style="text-align:left;flex:1" id="fn" value="${esc(parsed.storeName)}" placeholder="Nome negozio"/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Total</div>
+      <div class="fhdr">Totale</div>
       <div class="frow" style="border-radius:var(--r)">
         <span class="flbl">€</span>
         <input class="finp" id="ft" type="number" step="0.01" value="${parsed.total.toFixed(2)}" placeholder="0.00"/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Date</div>
+      <div class="fhdr">Data</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" id="fd" type="date" value="${parsed.date}"/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Category</div>
+      <div class="fhdr">Categoria</div>
       <div class="frow" style="border-radius:var(--r)">
         <select class="finp" id="fc">${catsOpt}</select>
       </div>
     </div>
     ${parsed.items.length > 0 ? `
     <div class="fsec">
-      <div class="fhdr">Detected Items</div>
+      <div class="fhdr">Prodotti rilevati</div>
       ${itemsRows}
     </div>` : ''}
     <div class="pad"></div>
-    <button class="btn btn-p" onclick="saveReceiptFromForm()">Save Receipt</button>
+    <button class="btn btn-p" onclick="saveReceiptFromForm()">Salva Scontrino</button>
     <div class="pad"></div>
   </div>`;
 }
@@ -396,7 +425,92 @@ function saveReceiptFromForm() {
 
   haptic('medium');
   closeOverlay('oscanner');
-  toast('Receipt saved!');
+  toast('Scontrino salvato!');
+  renderDashboard();
+  if (state.tab === 'r') renderReceipts();
+}
+
+// ── MANUAL ENTRY ─────────────────────────────────────────────
+function openManualEntry() {
+  haptic('light');
+  const today = new Date().toISOString().split('T')[0];
+  const catsOpt = CATS.map(c =>
+    `<option value="${c.id}" ${c.id === 'groceries' ? 'selected' : ''}>${c.icon} ${c.name}</option>`
+  ).join('');
+  openOverlay('oscanner', `
+  <div class="nav-row">
+    <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
+    <h2>Nuovo Scontrino</h2>
+    <button class="nav-act" onclick="saveManualEntry()">Salva</button>
+  </div>
+  <div style="padding-bottom:40px">
+    <div class="fsec">
+      <div class="fhdr">Negozio</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="mn"
+          placeholder="Nome negozio" oninput="autoCategory(this.value)" autofocus/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Totale</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <span class="flbl">€</span>
+        <input class="finp" id="mt" type="number" step="0.01"
+          placeholder="0.00" inputmode="decimal"/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Data</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" id="md" type="date" value="${today}"/>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Categoria</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <select class="finp" id="mc">${catsOpt}</select>
+      </div>
+    </div>
+    <div class="fsec">
+      <div class="fhdr">Note (opzionale)</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="mnote"
+          placeholder="Aggiungi una nota…"/>
+      </div>
+    </div>
+    <div class="pad"></div>
+    <button class="btn btn-p" onclick="saveManualEntry()">Salva Scontrino</button>
+    <div class="pad"></div>
+  </div>`);
+}
+
+function saveManualEntry() {
+  const name  = (document.getElementById('mn')?.value || '').trim() || 'Store';
+  const total = parseFloat(document.getElementById('mt')?.value || '0') || 0;
+  const date  = document.getElementById('md')?.value || new Date().toISOString().split('T')[0];
+  const catId = document.getElementById('mc')?.value || 'other';
+  const note  = (document.getElementById('mnote')?.value || '').trim();
+
+  if (!total) { toast('Inserisci il totale'); return; }
+
+  if (isDuplicate(name, total)) {
+    if (!confirm('Sembra un duplicato. Salvare comunque?')) return;
+  }
+
+  const receipt = {
+    id: uid(), storeName: name, totalAmount: total,
+    date, createdAt: new Date().toISOString(),
+    category: catId, items: [], rawText: '', imageDataURL: null,
+    note: note || undefined,
+  };
+
+  state.receipts.unshift(receipt);
+  persist();
+  if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
+
+  haptic('medium');
+  closeOverlay('oscanner');
+  toast('Scontrino salvato!');
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
 }
@@ -431,6 +545,10 @@ function renderScannerPicker() {
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
         Scegli dalla Libreria
       </button>
+      <button class="btn btn-s" onclick="closeSheet();setTimeout(openManualEntry,380)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Inserimento Manuale
+      </button>
     </div>
     <p style="font-size:12px;color:var(--lbl2);margin-top:12px;line-height:1.6;text-align:center">
       OCR elaborato nel browser — nessun upload, completamente privato.
@@ -444,7 +562,7 @@ function renderScannerPickerOverlay() {
   const html = `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-    <h2>Add Receipt</h2><div style="min-width:56px"></div>
+    <h2>Aggiungi</h2><div style="min-width:56px"></div>
   </div>
   <div class="scan-pick">
     <div class="scan-pick-ico">🧾</div>
@@ -606,8 +724,17 @@ function showEditForm(id) {
         <select class="finp" id="ec">${catsOpt}</select>
       </div>
     </div>
+    <div class="fsec">
+      <div class="fhdr">Note</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="enote"
+          placeholder="Aggiungi una nota…" value="${esc(r.note||'')}"/>
+      </div>
+    </div>
     <div class="pad"></div>
     <button class="btn btn-p" onclick="saveReceiptEdit('${id}')">Salva Modifiche</button>
+    <div style="height:10px"></div>
+    <button class="btn btn-d" onclick="confirmDelete('${id}')">Elimina Scontrino</button>
     <div class="pad"></div>
   </div>`;
 }
@@ -623,6 +750,8 @@ function saveReceiptEdit(id) {
   if (dt) r.date = dt;
   const cat = document.getElementById('ec')?.value;
   if (cat) { r.category = cat; state.learned[(r.storeName||'').toLowerCase()] = cat; saveLearned(); }
+  const noteVal = (document.getElementById('enote')?.value || '').trim();
+  r.note = noteVal || undefined;
   persist();
   haptic('medium');
   toast('Scontrino aggiornato');
@@ -763,10 +892,14 @@ function renderInsightsSection(insights) {
 function renderSparkSection(data) {
   const hasData = data.some(d => d.total > 0);
   if (!hasData) return '';
+  const year = new Date().getFullYear();
+  const yearRx = state.receipts.filter(r => new Date(r.date||r.createdAt).getFullYear() === year);
+  const yearTotal = yearRx.reduce((s,r)=>s+(r.totalAmount||0),0);
   return `
   <div class="card spark-wrap">
     <div class="spark-hdr">
       <span class="spark-title">Ultimi 6 Mesi</span>
+      ${yearTotal > 0 ? `<span style="font-size:12px;font-weight:700;color:var(--lbl)">${fmt(yearTotal)} nel ${year}</span>` : ''}
     </div>
     ${sparklineSVG(data)}
   </div>`;
@@ -816,8 +949,8 @@ function renderDashboard() {
   const emptyState = state.receipts.length === 0 ? `
   <div class="empty" style="margin-top:20px">
     <div class="empty-ico">🧾</div>
-    <h3>No receipts yet</h3>
-    <p>Tap <strong>＋</strong> to scan your first receipt and start tracking your spending.</p>
+    <h3>Nessuno scontrino</h3>
+    <p>Tocca <strong>＋</strong> per aggiungere il primo scontrino e iniziare a tracciare le spese.</p>
   </div>` : '';
 
   const weekSection    = renderWeekSection(state.receipts);
@@ -873,7 +1006,8 @@ function renderReceipts(q) {
   if (query) {
     list = list.filter(r =>
       (r.storeName || '').toLowerCase().includes(query) ||
-      catById(r.category).name.toLowerCase().includes(query)
+      catById(r.category).name.toLowerCase().includes(query) ||
+      (r.note || '').toLowerCase().includes(query)
     );
   }
   if (state.filterCat) {
@@ -927,7 +1061,7 @@ function renderReceipts(q) {
             <div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>
             <div class="ri">
               <div class="rn">${esc(r.storeName || 'Store')}${badge}</div>
-              <div class="rs">${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}</div>
+              <div class="rs">${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}${r.note ? `<span class="note-pip"> · 📝</span>` : ''}</div>
             </div>
             <div class="ra">${fmt(r.totalAmount || 0)}</div>
           </div>
@@ -963,7 +1097,7 @@ function buildDetailHTML(id) {
 
   const itemsHTML = (r.items || []).length > 0 ? `
   <div class="det-sec">
-    <h3>Items</h3>
+    <h3>Prodotti</h3>
     <div class="card">
       ${r.items.map(it => `
       <div class="irow">
@@ -975,7 +1109,7 @@ function buildDetailHTML(id) {
 
   const rawHTML = r.rawText ? `
   <div class="det-sec">
-    <h3>Raw OCR Text</h3>
+    <h3>Testo OCR</h3>
     <div class="card" style="padding:12px 16px">
       <pre style="font-size:11px;white-space:pre-wrap;color:var(--lbl2);font-family:'Menlo',monospace;line-height:1.5">${esc(r.rawText)}</pre>
     </div>
@@ -984,8 +1118,8 @@ function buildDetailHTML(id) {
   const existingTip = state.aiTips[id];
   const tipHTML = existingTip
     ? `<p class="ai-tip">${esc(existingTip)}</p>`
-    : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Get a personalized saving tip for this receipt.</p>
-       <button class="ai-btn" onclick="fetchTip('${id}')">Get tip</button>`;
+    : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Ottieni un consiglio personalizzato per questo scontrino.</p>
+       <button class="ai-btn" onclick="fetchTip('${id}')">Ottieni consiglio</button>`;
 
   return `
   <div class="nav-row">
@@ -994,21 +1128,22 @@ function buildDetailHTML(id) {
     <button class="nav-act" onclick="showEditForm('${id}')">Modifica</button>
   </div>
   <div style="padding-bottom:48px">
-    ${r.imageDataURL ? `<img src="${r.imageDataURL}" class="img-thumb" style="margin:12px auto"/>` : ''}
+    ${r.imageDataURL ? `<img src="${r.imageDataURL}" class="img-thumb" style="margin:12px auto;cursor:zoom-in" onclick="openImage('${id}')"/>` : ''}
     <div class="card det-hdr">
       <div class="det-store">${esc(r.storeName || 'Store')}</div>
       <div class="det-date">${fmtDate(r.date || r.createdAt)}</div>
       <div class="det-total">${fmt(r.totalAmount || 0)}</div>
     </div>
+    ${r.note ? `<div class="det-note">${esc(r.note)}</div>` : ''}
     <div class="det-sec" style="margin-top:14px">
-      <h3>Category</h3>
+      <h3>Categoria</h3>
       <div class="chips">${chipsHTML}</div>
     </div>
     ${itemsHTML}
     <div class="card ai-card" id="tip_${id}">
       <div class="ai-hdr">
         <span style="font-size:16px">✦</span>
-        <h3>AI Saving Tip</h3>
+        <h3>Consiglio AI</h3>
         <span class="ai-badge">Claude</span>
       </div>
       ${tipHTML}
@@ -1038,11 +1173,11 @@ function setCategory(id, catId) {
 
 function confirmDelete(id) {
   haptic('heavy');
-  if (!confirm('Delete this receipt? This cannot be undone.')) return;
+  if (!confirm('Eliminare questo scontrino? Non sarà possibile annullare.')) return;
   state.receipts = state.receipts.filter(x => x.id !== id);
   persist();
   closeOverlay('odetail');
-  toast('Receipt deleted');
+  toast('Scontrino eliminato');
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
   else if (state.tab === 's') renderSettings();
@@ -1055,7 +1190,7 @@ function renderSettings() {
   const key   = state.settings.apiKey || '';
   const budget = state.settings.budget || 0;
   el.innerHTML = `
-  <div class="nav"><h1>Settings</h1></div>
+  <div class="nav"><h1>Impostazioni</h1></div>
   <div class="ssel">
     <div class="sshdr">Budget Mensile</div>
     <div class="srow" style="border-radius:var(--r)">
@@ -1087,15 +1222,15 @@ function renderSettings() {
   <div class="ssel">
     <div class="sshdr">Data</div>
     <button class="btn btn-s" style="margin-bottom:10px" onclick="exportCSV()" ${!count ? 'disabled' : ''}>
-      Export to CSV
+      Esporta CSV
     </button>
     <button class="btn btn-d" onclick="clearAllData()" ${!count ? 'disabled' : ''}>
-      Clear All Data
+      Cancella tutti i dati
     </button>
-    <div class="snote">${count} receipt${count === 1 ? '' : 's'} stored locally.</div>
+    <div class="snote">${count} scontrin${count === 1 ? 'o' : 'i'} salvati localmente.</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">About</div>
+    <div class="sshdr">Info</div>
     <div class="srow"><span class="slbl">Version</span><span class="sval">1.1 PWA</span></div>
     <div class="srow"><span class="slbl">OCR Engine</span><span class="sval">Tesseract.js 5</span></div>
     <div class="srow"><span class="slbl">AI Model</span><span class="sval">Claude Sonnet</span></div>
@@ -1125,13 +1260,13 @@ function saveApiKey() {
   const v = (document.getElementById('apik')?.value || '').trim();
   state.settings.apiKey = v;
   saveSettings();
-  toast(v ? 'API key saved ✓' : 'API key cleared');
+  toast(v ? 'API key salvata ✓' : 'API key rimossa');
   renderSettings();
 }
 function removeApiKey() {
   state.settings.apiKey = '';
   saveSettings();
-  toast('API key removed');
+  toast('API key rimossa');
   renderSettings();
 }
 function exportCSV() {
@@ -1156,14 +1291,14 @@ function exportCSV() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('CSV exported!');
+  toast('CSV esportato!');
 }
 function clearAllData() {
-  if (!confirm(`Delete all ${state.receipts.length} receipts? This cannot be undone.`)) return;
+  if (!confirm(`Eliminare tutti i ${state.receipts.length} scontrini? Non sarà possibile annullare.`)) return;
   state.receipts = [];
   state.aiTips   = {};
   persist();
-  toast('All data cleared');
+  toast('Dati eliminati');
   renderDashboard();
   renderReceipts();
   renderSettings();
@@ -1177,7 +1312,7 @@ async function fetchTip(receiptId) {
   if (!r) return;
 
   if (!key) {
-    toast('Add your Claude API key in Settings first');
+    toast('Aggiungi la tua API key Claude nelle Impostazioni');
     return;
   }
 
@@ -1221,7 +1356,7 @@ async function fetchTip(receiptId) {
     if (tipEl) tipEl.innerHTML = `
       <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
       <p style="font-size:13px;color:var(--red);margin-bottom:8px">${esc(msg)}</p>
-      <button class="ai-btn" onclick="fetchTip('${receiptId}')">Retry</button>`;
+      <button class="ai-btn" onclick="fetchTip('${receiptId}')">Riprova</button>`;
   }
 }
 
@@ -1245,10 +1380,10 @@ function init() {
       </div>
       <div class="empty">
         <div class="empty-ico">⚠️</div>
-        <h3>OCR Failed</h3>
-        <p>${esc(err.message || 'Could not read the image.')}</p>
+        <h3>Scansione fallita</h3>
+        <p>${esc(err.message || 'Impossibile leggere l\'immagine.')}</p>
         <button class="btn btn-s" style="width:200px;margin-top:8px"
-          onclick="closeOverlay('oscanner');openScanner()">Try Again</button>
+          onclick="closeOverlay('oscanner');openScanner()">Riprova</button>
       </div>`);
     }
   });
