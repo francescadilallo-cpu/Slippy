@@ -101,6 +101,21 @@ function groupByDate(receipts) {
   return order.map(k => [k, groups[k]]);
 }
 
+// ── COUNT-UP ANIMATION ────────────────────────────────────────
+function animateCount(el, target) {
+  if (!el || target <= 0) return;
+  const dur = 680;
+  const start = performance.now();
+  function step(now) {
+    const p = Math.min((now - start) / dur, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = fmt(target * eased);
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = fmt(target);
+  }
+  requestAnimationFrame(step);
+}
+
 // ── HAPTIC FEEDBACK ───────────────────────────────────────────
 function haptic(type = 'light') {
   if (!navigator.vibrate) return;
@@ -936,7 +951,7 @@ function renderDashboard() {
 
   const chartSection = catRows.length > 0 ? `
   <div class="card chart-card">
-    <div class="chart-title">By Category</div>
+    <div class="chart-title">Per Categoria</div>
     ${catRows.map(({ cat, amt }) => `
     <div class="brow">
       <span class="bico">${cat.icon}</span>
@@ -962,13 +977,13 @@ function renderDashboard() {
 
   el.innerHTML = `
   <div class="nav"><h1>Dashboard</h1></div>
-  <div class="mpick">
-    <button onclick="shiftMonth(-1)" ${prevDisabled}>‹</button>
-    <span>${monthLabel(mo)}</span>
-    <button onclick="shiftMonth(1)" ${nextDisabled}>›</button>
-  </div>
   <div class="card spend-card">
-    <div class="s-lbl">Questo mese</div>
+    <div class="spend-mrow">
+      <button onclick="shiftMonth(-1)" ${prevDisabled}>‹</button>
+      <span>${monthLabel(mo)}</span>
+      <button onclick="shiftMonth(1)" ${nextDisabled}>›</button>
+    </div>
+    <div class="s-lbl">Spesa totale</div>
     <div class="s-amt">${fmt(total)}</div>
     ${deltaStr}
     <div class="s-stats">
@@ -984,6 +999,9 @@ function renderDashboard() {
   ${chartSection}
   ${emptyState}
   <div class="pad"></div>`;
+
+  // Count-up animation on the main spend amount
+  animateCount(el.querySelector('.s-amt'), total);
 }
 
 function shiftMonth(dir) {
