@@ -55,7 +55,9 @@ function saveLearned()  { localStorage.setItem('slippy_learned',  JSON.stringify
 
 // ── HELPERS ───────────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-function fmt(n) { return '€ ' + Number(n || 0).toFixed(2).replace('.', ','); }
+function fmt(n) {
+  return '€ ' + Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function fmtDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
@@ -582,6 +584,13 @@ function renderOCRPreview(parsed, imgURL) {
       <div class="fhdr">Prodotti rilevati</div>
       ${itemsRows}
     </div>` : ''}
+    <div class="fsec">
+      <div class="fhdr">Note (opzionale)</div>
+      <div class="frow" style="border-radius:var(--r)">
+        <input class="finp" style="text-align:left;flex:1" id="fnote"
+          placeholder="Aggiungi una nota…"/>
+      </div>
+    </div>
     <div class="pad"></div>
     <button class="btn btn-p" onclick="saveReceiptFromForm()">Salva Scontrino</button>
     <div class="pad"></div>
@@ -606,6 +615,7 @@ function saveReceiptFromForm() {
   const total = parseFloat(document.getElementById('ft')?.value || '0') || 0;
   const date  = document.getElementById('fd')?.value || new Date().toISOString().split('T')[0];
   const catId = document.getElementById('fc')?.value || 'other';
+  const note  = (document.getElementById('fnote')?.value || '').trim();
 
   // Duplicate detection
   if (isDuplicate(name, total)) {
@@ -627,6 +637,7 @@ function saveReceiptFromForm() {
     category: catId, items,
     rawText: state.ocrData?.rawText || '',
     imageDataURL: state.ocrData?.imgDataURL || null,
+    note: note || undefined,
   };
 
   state.receipts.unshift(receipt);
@@ -1754,7 +1765,10 @@ async function fetchTip(receiptId) {
 
   try {
     const cat    = catById(r.category);
-    const prompt = `Sei un consulente finanziario. Ho speso ${fmt(r.totalAmount || 0)} da "${r.storeName || 'un negozio'}" (categoria: ${cat.name}). Dammi 1 consiglio pratico in italiano in massimo 2 frasi. Sii specifico e amichevole.`;
+    const itemsLine = r.items?.length > 0
+      ? ` Prodotti: ${r.items.slice(0,5).map(i=>i.name).join(', ')}.`
+      : '';
+    const prompt = `Sei un consulente finanziario. Ho speso ${fmt(r.totalAmount || 0)} da "${r.storeName || 'un negozio'}" (categoria: ${cat.name}).${itemsLine} Dammi 1 consiglio pratico e specifico in italiano in massimo 2 frasi. Sii amichevole.`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1808,7 +1822,7 @@ function init() {
       openOverlay('oscanner', `
       <div class="nav-row">
         <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-        <h2>Error</h2><div style="min-width:56px"></div>
+        <h2>Errore</h2><div style="min-width:56px"></div>
       </div>
       <div class="empty">
         <div class="empty-ico">⚠️</div>
