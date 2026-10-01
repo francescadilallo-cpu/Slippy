@@ -634,16 +634,12 @@ function fileToDataURL(file) {
 async function preprocessReceiptImage(file) {
   try {
     const bitmap = await createImageBitmap(file);
-    // Tesseract needs text at ~20-30px tall minimum; scale up small images,
-    // cap large ones at 3000px to avoid memory issues
-    const MAX = 3000, MIN = 1200;
+    // 2000px cap worked reliably; larger sizes cause mobile memory issues
+    const MAX = 2000;
     let w = bitmap.width, h = bitmap.height;
     const longest = Math.max(w, h);
     if (longest > MAX) {
       const ratio = MAX / longest;
-      w = Math.round(w * ratio); h = Math.round(h * ratio);
-    } else if (longest < MIN) {
-      const ratio = MIN / longest;
       w = Math.round(w * ratio); h = Math.round(h * ratio);
     }
     const canvas = document.createElement('canvas');
@@ -835,6 +831,13 @@ function renderOCRPreview(parsed, imgURL) {
     </div>
     <div class="pad"></div>
     <button class="btn btn-p" onclick="saveReceiptFromForm()">Salva Scontrino</button>
+    ${parsed.rawText ? `
+    <div class="fsec" style="margin-top:8px">
+      <details class="ocr-raw-wrap">
+        <summary class="ocr-raw-toggle">🔍 Testo riconosciuto (debug)</summary>
+        <pre class="ocr-raw">${esc(parsed.rawText.slice(0, 800))}</pre>
+      </details>
+    </div>` : ''}
     <div class="pad"></div>
   </div>`;
 }
