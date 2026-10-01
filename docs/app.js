@@ -836,14 +836,40 @@ function renderWeekSection(allRx) {
   const diff  = lastT > 0 ? ((thisT - lastT) / lastT * 100) : null;
   const dc    = diff !== null ? (diff > 0 ? 'var(--red)' : 'var(--green)') : '';
 
+  // Daily bar chart Mon–Sun
+  const dayLabels = ['L','M','M','G','V','S','D'];
+  const dayTotals = new Array(7).fill(0);
+  thisW.forEach(r => {
+    const d = new Date(r.date || r.createdAt);
+    const idx = d.getDay() === 0 ? 6 : d.getDay() - 1;
+    dayTotals[idx] += r.totalAmount || 0;
+  });
+  const maxDay = Math.max(...dayTotals, 1);
+  const todayIdx = now.getDay() === 0 ? 6 : now.getDay() - 1;
+
+  const dayBars = dayTotals.map((t, i) => {
+    const pct = Math.max(6, Math.round(t / maxDay * 100));
+    const isToday = i === todayIdx;
+    const isPast  = i <= todayIdx;
+    const bg = isToday ? 'var(--accent)' : (isPast && t > 0) ? 'var(--accent-end)' : 'var(--fill2)';
+    return `<div class="wd-col">
+      <div class="wd-bar-wrap">
+        <div class="wd-bar" style="height:${t > 0 ? pct : 6}%;background:${bg};opacity:${!isPast && t === 0 ? .35 : 1}"></div>
+      </div>
+      <div class="wd-lbl" style="${isToday ? 'color:var(--accent);font-weight:700' : ''}">${dayLabels[i]}</div>
+    </div>`;
+  }).join('');
+
   return `
   <div class="card week-wrap">
-    <div class="week-lbl">Questa settimana</div>
-    <div class="week-body">
-      <div class="week-amt">${fmt(thisT)}</div>
-      ${diff !== null ? `<div class="week-delta" style="color:${dc}">${diff > 0 ? '↑' : '↓'} ${Math.abs(diff).toFixed(0)}%</div>` : ''}
+    <div class="week-top">
+      <div>
+        <div class="week-lbl">Questa Settimana</div>
+        <div class="week-amt">${fmt(thisT)}</div>
+      </div>
+      ${diff !== null ? `<div class="week-delta-badge" style="background:${diff > 0 ? 'rgba(255,59,48,.12)' : 'rgba(52,199,89,.12)'};color:${dc}">${diff > 0 ? '↑' : '↓'} ${Math.abs(diff).toFixed(0)}%</div>` : ''}
     </div>
-    <div class="week-sub">${thisW.length} scontrin${thisW.length===1?'o':'i'} · ${lastT > 0 ? (diff > 0 ? 'più della sett. scorsa' : 'meno della sett. scorsa') : 'prima settimana tracciata'}</div>
+    <div class="wd-bars">${dayBars}</div>
   </div>`;
 }
 
@@ -939,20 +965,54 @@ function getMonthlyTotals(n) {
 }
 
 function sparklineSVG(data) {
-  const W = 280, H = 70, pad = 4;
+  const W = 320, H = 84, padX = 14, padY = 18, btm = 18;
+  const plotH = H - padY - btm;
   const max = Math.max(...data.map(d => d.total), 1);
-  const barW = Math.floor((W - pad * (data.length + 1)) / data.length);
-  let bars = '';
-  let labels = '';
-  data.forEach((d, i) => {
-    const x = pad + i * (barW + pad);
-    const barH = Math.max(4, Math.round((d.total / max) * (H - 20)));
-    const y = H - 16 - barH;
-    const color = d.isCurrent ? 'var(--accent)' : 'var(--fill2)';
-    bars += `<rect x="${x}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${color}"/>`;
-    labels += `<text x="${x + barW / 2}" y="${H - 2}" text-anchor="middle" font-size="9" fill="var(--lbl2)" font-family="-apple-system,sans-serif">${d.label}</text>`;
-  });
-  return `<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${bars}${labels}</svg>`;
+  const step = (W - padX * 2) / Math.max(data.length - 1, 1);
+
+  const pts = data.map((d, i) => ({
+    x: padX + i * step,
+    y: padY + plotH - (d.total / max * plotH),
+    ...d,
+  }));
+
+  const line = pts.map((p, i) => {
+    if (i === 0) return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+    const pr = pts[i - 1];
+    const cx = step * 0.4;
+    return `C ${(pr.x + cx).toFixed(1)} ${pr.y.toFixed(1)} ${(p.x - cx).toFixed(1)} ${p.y.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  }).join(' ');
+
+  const area = `${line} L ${pts[pts.length-1].x.toFixed(1)} ${(H-btm).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(H-btm).toFixed(1)} Z`;
+
+  const dots = pts.map(p => p.total > 0
+    ? `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${p.isCurrent ? 4 : 2.5}" fill="${p.isCurrent ? 'var(--accent)' : 'var(--lbl3)'}"/>`
+    : '').join('');
+
+  const labels = pts.map(p =>
+    `<text x="${p.x.toFixed(1)}" y="${H - 3}" text-anchor="middle" font-size="9"
+      fill="${p.isCurrent ? 'var(--accent)' : 'var(--lbl2)'}"
+      font-weight="${p.isCurrent ? '700' : '400'}"
+      font-family="-apple-system,sans-serif">${p.label}</text>`).join('');
+
+  const curr = pts.find(p => p.isCurrent);
+  const currAmt = curr && curr.total > 0
+    ? `<text x="${curr.x.toFixed(1)}" y="${(curr.y - 8).toFixed(1)}" text-anchor="middle"
+        font-size="9" font-weight="700" fill="var(--accent)"
+        font-family="-apple-system,sans-serif">${fmt(curr.total)}</text>`
+    : '';
+
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--accent)" stop-opacity=".20"/>
+        <stop offset="100%" stop-color="var(--accent)" stop-opacity=".01"/>
+      </linearGradient>
+    </defs>
+    <path d="${area}" fill="url(#sg)"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}${currAmt}${labels}
+  </svg>`;
 }
 
 // ── SMART INSIGHTS ────────────────────────────────────────────
