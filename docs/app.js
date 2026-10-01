@@ -1332,6 +1332,26 @@ function renderDashboard() {
   const topStoresSection  = renderTopStoresSection(thisRx);
   const yearlySection     = renderYearlySection();
 
+  const nudgeBudget = (!state.settings.budget && thisRx.length >= 3 && sameMonth(mo, new Date())) ? `
+  <div class="card nudge-card" onclick="gotoTab('s')">
+    <div class="nudge-ico">💰</div>
+    <div class="nudge-body">
+      <div class="nudge-title">Imposta un budget</div>
+      <div class="nudge-sub">Monitora quanto stai spendendo rispetto al tuo obiettivo mensile.</div>
+    </div>
+    <div class="nudge-arr">›</div>
+  </div>` : '';
+
+  const nudgeAI = (!state.settings.apiKey && thisRx.length >= 5 && sameMonth(mo, new Date())) ? `
+  <div class="card nudge-card" onclick="gotoTab('s')">
+    <div class="nudge-ico">✦</div>
+    <div class="nudge-body">
+      <div class="nudge-title">Sblocca l'analisi AI</div>
+      <div class="nudge-sub">Aggiungi la tua API key Claude per ricevere consigli personalizzati.</div>
+    </div>
+    <div class="nudge-arr">›</div>
+  </div>` : '';
+
   el.innerHTML = `
   <div class="nav brand-nav">
     <div class="brand-row">
@@ -1364,6 +1384,8 @@ function renderDashboard() {
   ${chartSection}
   ${topStoresSection}
   ${aiMonthCard}
+  ${nudgeBudget}
+  ${nudgeAI}
   ${emptyState}
   <div class="pad"></div>`;
 
