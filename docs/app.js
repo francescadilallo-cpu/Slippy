@@ -437,24 +437,54 @@ function categorize(storeName) {
 }
 
 // ── OCR TEXT PARSING ──────────────────────────────────────────
-function extractStoreName(lines) {
-  const skipRe = /P\.?\s*IVA|C\.?\s*F\.?\s*[:.]|VAT\b|TEL\.?\s*\d|FAX\b|WWW\.|HTTP|[@]|\bVIA\b|\bV\.LE\b|\bCORSO\b|\bC\.SO\b|\bPIAZZA\b|\bP\.ZA\b|\bVIALE\b|\bLARGO\b|\d{5}\s+[A-Z]|SCONTRINO|RICEVUTA\s+FISC|OPERATORE|MATRICOLA|REGISTRATORE|DOCUMENTO\s+COMM|\d{2}:\d{2}/i;
-  const amtRe  = /\d{1,4}[.,]\d{2}/;
-  const dateRe = /\d{2}[\/\-.]\d{2}[\/\-.]\d{2}/;
+function titleCase(s) {
+  return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase()).trim();
+}
 
-  for (const l of lines.slice(0, 8)) {
-    // Strip border characters OCR picks up (|, *, -, =, _)
-    const t = l.trim().replace(/^[*|=\-_\s]+|[*|=\-_\s]+$/g, '').trim();
-    if (t.length < 2) continue;
-    if (skipRe.test(t) || amtRe.test(t) || dateRe.test(t)) continue;
-    if (!/[A-Za-zÀ-ú]{2,}/.test(t)) continue; // must have real letters
-    // All-caps → title-case
-    if (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) {
-      return t[0].toUpperCase() + t.slice(1).toLowerCase()
-        .replace(/\b([a-zà-ú])/g, c => c.toUpperCase());
-    }
-    return t;
+function extractStoreName(lines) {
+  const addrRe  = /\bVIA\b|\bV\.LE\b|\bCORSO\b|\bC\.SO\b|\bPIAZZA\b|\bP\.ZA\b|\bVIALE\b|\bLARGO\b|\bLOC\b|\bSTRADA\b|\bS\.S\.\b/i;
+  const skipRe  = /P\.?\s*IVA|C\.?\s*F\.?\s*[:.]|VAT\b|TEL\.?\s*\d|FAX\b|WWW\.|HTTP|[@]|SCONTRINO|RICEVUTA\s+FISC|OPERATORE|MATRICOLA|REGISTRATORE|DOCUMENTO\s+COMM|\d{2}:\d{2}/i;
+  const amtRe   = /\d{1,4}[.,]\d{2}/;
+  const dateRe  = /\d{2}[\/\-.]\d{2}[\/\-.]\d{2}/;
+
+  function clean(l) {
+    return l.trim().replace(/^[*|=\-_\s]+|[*|=\-_\s]+$/g, '').trim();
   }
+  function isGood(t) {
+    if (t.length < 2) return false;
+    if (skipRe.test(t) || addrRe.test(t) || amtRe.test(t) || dateRe.test(t)) return false;
+    return /[A-Za-zÀ-ú]{2,}/.test(t);
+  }
+
+  // Strategy 1: look at lines BEFORE the first address line (most reliable)
+  const firstAddrIdx = lines.slice(0, 12).findIndex(l => addrRe.test(l));
+  if (firstAddrIdx > 0) {
+    for (let i = 0; i < firstAddrIdx; i++) {
+      const t = clean(lines[i]);
+      if (!isGood(t)) continue;
+      return (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) ? titleCase(t) : t;
+    }
+  }
+
+  // Strategy 2: also check if an address line contains the name before a dash/comma
+  if (firstAddrIdx >= 0) {
+    const addrLine = lines[firstAddrIdx];
+    const parts = addrLine.split(/\s*[-–,]\s*/);
+    if (parts.length > 1) {
+      const before = parts[0].trim();
+      if (before.length > 2 && !/^\d/.test(before)) {
+        return (before === before.toUpperCase()) ? titleCase(before) : before;
+      }
+    }
+  }
+
+  // Strategy 3: simple first-match fallback
+  for (const l of lines.slice(0, 8)) {
+    const t = clean(l);
+    if (!isGood(t)) continue;
+    return (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) ? titleCase(t) : t;
+  }
+
   return 'Negozio';
 }
 
@@ -594,19 +624,13 @@ async function preprocessReceiptImage(file) {
     const imgData = ctx.getImageData(0, 0, w, h);
     const d = imgData.data;
 
-    // Compute average brightness for adaptive threshold
-    let sum = 0;
-    for (let i = 0; i < d.length; i += 4)
-      sum += 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-    const avg = sum / (d.length / 4);
-    const threshold = Math.min(200, Math.max(100, avg * 1.05));
-
+    // Greyscale + linear contrast stretch around midpoint
+    // Gentler than hard threshold — handles angled/uneven-lit receipts better
     for (let i = 0; i < d.length; i += 4) {
-      // Greyscale
-      let g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-      // Strong contrast: push towards pure black/white
-      g = g < threshold ? Math.max(0, g - 40) : Math.min(255, g + 40);
-      d[i] = d[i+1] = d[i+2] = g;
+      const g = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
+      // Stretch contrast 1.6× around mid-grey
+      const stretched = Math.min(255, Math.max(0, (g - 128) * 1.6 + 128));
+      d[i] = d[i+1] = d[i+2] = stretched;
     }
     ctx.putImageData(imgData, 0, 0);
     return canvas;
@@ -646,7 +670,7 @@ async function runOCR(file) {
   });
 
   await worker.setParameters({
-    tessedit_pageseg_mode: '6',  // single uniform block — best for receipts
+    tessedit_pageseg_mode: '4',  // single column, variable text sizes — correct for receipts
     tessedit_ocr_engine_mode: '1', // LSTM neural net only
     preserve_interword_spaces: '1',
   });
