@@ -263,6 +263,11 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .irow:last-child{border-bottom:none}
 .in{font-size:14px}.ia{font-size:14px;font-weight:600;color:var(--lbl2)}
 
+/* SPINNER */
+@keyframes _spin{to{transform:rotate(360deg)}}
+.spin{border:2.5px solid var(--fill2);border-top-color:var(--accent);border-radius:50%;
+  animation:_spin .7s linear infinite}
+
 /* AI */
 .ai-card{margin:12px 16px 0;padding:18px}
 .ai-hdr{display:flex;align-items:center;gap:8px;margin-bottom:10px}
