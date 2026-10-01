@@ -402,9 +402,12 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .forecast-card{margin:10px 16px 0;padding:16px 18px;
   border-left:3px solid var(--accent)}
 .forecast-lbl{font-size:11px;font-weight:600;text-transform:uppercase;
-  letter-spacing:.6px;color:var(--lbl2);margin-bottom:4px}
+  letter-spacing:.6px;color:var(--lbl2);margin-bottom:6px}
+.forecast-main{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
 .forecast-amt{font-size:28px;font-weight:700;letter-spacing:-.5px;
-  font-variant-numeric:tabular-nums;margin-bottom:4px}
+  font-variant-numeric:tabular-nums}
+.forecast-rate{font-size:14px;font-weight:600;color:var(--lbl2);font-variant-numeric:tabular-nums}
+.forecast-rate span{font-size:11px;font-weight:500}
 .forecast-sub{font-size:13px;color:var(--lbl2);line-height:1.4}
 
 /* RECEIPTS MONTH TOTAL */
@@ -428,7 +431,9 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 
 /* DETAIL NOTE */
 .det-note{margin:8px 16px 0;padding:12px 16px;background:var(--card);
-  border-radius:var(--r);font-size:14px;color:var(--lbl2);line-height:1.6}
+  border-radius:var(--r);font-size:14px;color:var(--lbl2);line-height:1.6;
+  display:flex;align-items:flex-start;gap:8px}
+.det-note-ico{font-size:15px;flex-shrink:0;margin-top:1px}
 
 /* ANIMATED CATEGORY BARS */
 @keyframes barin{from{transform:scaleX(0)}to{transform:scaleX(1)}}
