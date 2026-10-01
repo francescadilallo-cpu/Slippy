@@ -208,6 +208,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--lbl);
   font-size:15px;color:var(--accent);font-family:inherit;flex:1;min-width:0;padding-left:8px}
 .finp::placeholder{color:var(--lbl3)}
 select.finp{-webkit-appearance:none;cursor:pointer}
+.qa-row{display:flex;gap:6px;padding:8px 0 4px;flex-wrap:wrap;background:var(--card);
+  border-radius:0 0 var(--r) var(--r);padding:8px 14px 10px;margin:0}
+.qa-chip{flex:1;min-width:44px;padding:7px 4px;border-radius:10px;border:.5px solid var(--sep);
+  background:var(--fill);font-size:13px;font-weight:600;color:var(--accent);
+  cursor:pointer;font-family:inherit;transition:background .12s,transform .1s}
+.qa-chip:active{background:var(--fill2);transform:scale(.93)}
 
 /* BUTTONS */
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;
