@@ -137,11 +137,11 @@ function renderTopStoresSection(thisRx) {
   const medals = ['🥇','🥈','🥉',''];
   return `
   <div class="card top-stores-card">
-    <div class="ts-title">Top Negozi del Mese</div>
+    <div class="ts-title">Top Negozi del Mese <span style="font-size:9px;opacity:.5;font-weight:400;text-transform:none">· tocca per cercare</span></div>
     ${sorted.map(([name, data], i) => {
       const cat = catById(data.cat);
       return `
-      <div class="ts-row">
+      <div class="ts-row" onclick="drillStore('${esc(name)}')" style="cursor:pointer">
         <span class="ts-medal">${medals[i]}</span>
         <span class="ts-ico">${cat.icon}</span>
         <div class="ts-info">
@@ -982,6 +982,13 @@ function setFilter(cat) {
 function setSort(order) {
   state.sortOrder = order;
   renderReceipts();
+}
+
+function drillStore(name) {
+  haptic('light');
+  state.filterCat = null;
+  gotoTab('r');
+  renderReceipts(name);
 }
 
 // ── WEEK SUMMARY ──────────────────────────────────────────────
