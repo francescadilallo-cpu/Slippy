@@ -1425,11 +1425,12 @@ function renderSettings() {
   <div class="nav"><h1>Impostazioni</h1></div>
   <div class="ssel">
     <div class="sshdr">Budget Mensile</div>
-    <div class="srow" style="border-radius:var(--r)">
-      <span class="slbl">€ Budget</span>
+    <div class="srow si-row" style="border-radius:var(--r)">
+      <div class="si-ico" style="background:#34C75922">💰</div>
+      <span class="slbl">€ Budget mensile</span>
       <input class="kinp" id="budgetInp" type="number" min="0" step="10"
         placeholder="0" value="${budget > 0 ? budget : ''}"
-        style="text-align:right;font-size:15px;font-family:inherit;color:var(--accent)"/>
+        style="text-align:right;font-size:15px;font-family:inherit;color:var(--accent);max-width:90px"/>
     </div>
     <div class="snote">Imposta un budget mensile per monitorare la spesa nella Dashboard.</div>
     <button class="btn btn-p" style="margin-top:8px" onclick="saveBudget()">Salva Budget</button>
@@ -1444,32 +1445,53 @@ function renderSettings() {
         <button class="btn btn-s" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
           onclick="toggleKeyVis()">Mostra / Nascondi</button>
         <button class="btn btn-p" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
-          onclick="saveApiKey()">Save</button>
+          onclick="saveApiKey()">Salva</button>
       </div>
       ${key ? `<button class="btn btn-d" style="width:auto;padding:10px;font-size:13px;margin:0"
-        onclick="removeApiKey()">Remove Key</button>` : ''}
+        onclick="removeApiKey()">Rimuovi Chiave</button>` : ''}
     </div>
-    <div class="snote">Stored in localStorage. Get yours at console.anthropic.com.</div>
+    <div class="snote">Salvata nel browser. Ottieni la tua su console.anthropic.com.</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">Data</div>
-    <button class="btn btn-s" style="margin-bottom:10px" onclick="exportCSV()" ${!count ? 'disabled' : ''}>
-      Esporta CSV
-    </button>
-    <button class="btn btn-d" onclick="clearAllData()" ${!count ? 'disabled' : ''}>
-      Cancella tutti i dati
-    </button>
-    <div class="snote">${count} scontrin${count === 1 ? 'o' : 'i'} salvati localmente.</div>
+    <div class="sshdr">Dati</div>
+    <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'exportCSV()' : ''}">
+      <div class="si-ico" style="background:#007AFF22">📤</div>
+      <span class="slbl" style="${!count ? 'color:var(--lbl3)' : ''}">Esporta CSV</span>
+      <span class="sval">${count} scontrin${count === 1 ? 'o' : 'i'}</span>
+    </div>
+    <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'clearAllData()' : ''}">
+      <div class="si-ico" style="background:#FF3B3022">🗑️</div>
+      <span class="slbl" style="${!count ? 'color:var(--lbl3)' : 'color:var(--red)'}">Cancella tutti i dati</span>
+    </div>
+    <div class="snote">I dati sono archiviati localmente sul tuo dispositivo.</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">Info</div>
-    <div class="srow"><span class="slbl">Versione</span><span class="sval">2.0 PWA</span></div>
-    <div class="srow"><span class="slbl">Motore OCR</span><span class="sval">Tesseract.js 5</span></div>
-    <div class="srow"><span class="slbl">Modello AI</span><span class="sval">Claude Sonnet</span></div>
-    <div class="srow"><span class="slbl">Lingue</span><span class="sval">Italiano · Inglese</span></div>
-    <div class="snote" style="text-align:center;padding:16px 4px;color:var(--lbl3)">
-      Snap your slip. Know your spending.
+    <div class="sshdr">Informazioni</div>
+    <div class="srow si-row">
+      <div class="si-ico" style="background:#5E5CE622">✦</div>
+      <span class="slbl">Versione</span>
+      <span class="sval">2.0 PWA</span>
     </div>
+    <div class="srow si-row">
+      <div class="si-ico" style="background:#34C75922">🔬</div>
+      <span class="slbl">Motore OCR</span>
+      <span class="sval">Tesseract.js 5</span>
+    </div>
+    <div class="srow si-row">
+      <div class="si-ico" style="background:#FF950022">🤖</div>
+      <span class="slbl">Modello AI</span>
+      <span class="sval">Claude Sonnet</span>
+    </div>
+    <div class="srow si-row">
+      <div class="si-ico" style="background:#AF52DE22">🌍</div>
+      <span class="slbl">Lingue</span>
+      <span class="sval">Italiano · Inglese</span>
+    </div>
+  </div>
+  <div class="settings-brand">
+    <div class="settings-brand-ico">S</div>
+    <div class="settings-brand-name">slippy</div>
+    <div class="settings-brand-tag">Fotografa lo scontrino. Conosci la tua spesa.</div>
   </div>
   <div class="pad"></div>`;
 }
