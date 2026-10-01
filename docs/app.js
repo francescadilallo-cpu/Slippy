@@ -441,6 +441,18 @@ function titleCase(s) {
   return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase()).trim();
 }
 
+function isGarbled(s) {
+  if (!s || s.length < 2) return true;
+  const tokens = s.trim().split(/\s+/);
+  // Too many single-char tokens → garbage
+  const singleChars = tokens.filter(t => t.replace(/[^A-Za-zÀ-ú]/g, '').length <= 1).length;
+  if (tokens.length >= 3 && singleChars / tokens.length > 0.5) return true;
+  // Too few real letters overall
+  const letters = (s.match(/[A-Za-zÀ-ú]/g) || []).length;
+  if (letters / s.length < 0.35) return true;
+  return false;
+}
+
 function extractStoreName(lines) {
   const addrRe  = /\bVIA\b|\bV\.LE\b|\bCORSO\b|\bC\.SO\b|\bPIAZZA\b|\bP\.ZA\b|\bVIALE\b|\bLARGO\b|\bLOC\b|\bSTRADA\b|\bS\.S\.\b/i;
   const skipRe  = /P\.?\s*IVA|C\.?\s*F\.?\s*[:.]|VAT\b|TEL\.?\s*\d|FAX\b|WWW\.|HTTP|[@]|SCONTRINO|RICEVUTA\s+FISC|OPERATORE|MATRICOLA|REGISTRATORE|DOCUMENTO\s+COMM|\d{2}:\d{2}/i;
@@ -453,7 +465,9 @@ function extractStoreName(lines) {
   function isGood(t) {
     if (t.length < 2) return false;
     if (skipRe.test(t) || addrRe.test(t) || amtRe.test(t) || dateRe.test(t)) return false;
-    return /[A-Za-zÀ-ú]{2,}/.test(t);
+    if (!/[A-Za-zÀ-ú]{2,}/.test(t)) return false;
+    if (isGarbled(t)) return false;
+    return true;
   }
 
   // Strategy 1: look at lines BEFORE the first address line (most reliable)
@@ -525,39 +539,47 @@ function extractTotal(lines) {
 function extractDate(lines) {
   const today = new Date();
 
-  function tryParseDMY(str) {
-    const m = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
-    if (!m) return null;
-    let d = +m[1], mo = +m[2], y = +m[3];
-    if (y < 100) y += 2000;
-    if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2000) return null;
-    const dt = new Date(y, mo - 1, d);
-    return (!isNaN(dt) && dt <= today) ? dt : null;
+  function parseDate(str) {
+    // dd/mm/yyyy or dd-mm-yyyy or dd.mm.yyyy
+    let m = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+    if (m) {
+      let d = +m[1], mo = +m[2], y = +m[3];
+      if (y < 100) y += 2000;
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && y >= 2000) {
+        const dt = new Date(y, mo - 1, d);
+        if (!isNaN(dt) && dt <= today) return dt;
+      }
+    }
+    // yyyy-mm-dd
+    m = str.match(/(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/);
+    if (m) {
+      const y = +m[1], mo = +m[2], d = +m[3];
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && y >= 2000) {
+        const dt = new Date(y, mo - 1, d);
+        if (!isNaN(dt) && dt <= today) return dt;
+      }
+    }
+    return null;
   }
 
-  function tryParseYMD(str) {
-    const m = str.match(/(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/);
-    if (!m) return null;
-    const y = +m[1], mo = +m[2], d = +m[3];
-    if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2000) return null;
-    const dt = new Date(y, mo - 1, d);
-    return (!isNaN(dt) && dt <= today) ? dt : null;
-  }
-
-  // Pass 1: lines that also have a time — these are transaction timestamps
+  // Collect ALL valid dates found in the receipt, keep each unique date once
+  const found = [];
   for (const l of lines) {
-    if (!/\d{2}:\d{2}/.test(l)) continue;
-    const dt = tryParseDMY(l) || tryParseYMD(l);
-    if (dt) return dt.toISOString().split('T')[0];
+    const dt = parseDate(l);
+    if (dt && !found.some(f => f.getTime() === dt.getTime())) {
+      found.push({ dt, hasTime: /\d{2}:\d{2}/.test(l) });
+    }
   }
 
-  // Pass 2: any line with a date
-  for (const l of lines) {
-    const dt = tryParseDMY(l) || tryParseYMD(l);
-    if (dt) return dt.toISOString().split('T')[0];
-  }
+  if (found.length === 0) return today.toISOString().split('T')[0];
 
-  return today.toISOString().split('T')[0];
+  // Prefer entries that have a time stamp on the same line (transaction timestamp)
+  const withTime = found.filter(f => f.hasTime);
+  const pool = withTime.length > 0 ? withTime : found;
+
+  // Among those, take the MOST RECENT date (receipt date is today or very recent)
+  pool.sort((a, b) => b.dt - a.dt);
+  return pool[0].dt.toISOString().split('T')[0];
 }
 
 function extractItems(lines) {
@@ -576,7 +598,9 @@ function extractItems(lines) {
     name = name.replace(/^[A-Z0-9]{1,6}\s+/, '').trim();
     // Strip quantity prefix: "2 X " or "3x "
     name = name.replace(/^\d+\s*[xX]\s*/, '').trim();
-    if (name.length > 1 && name.length < 50) items.push({ name, amount: price });
+    if (name.length < 2 || name.length > 50) continue;
+    if (isGarbled(name)) continue; // skip OCR garbage lines
+    items.push({ name, amount: price });
   }
   return items.slice(0, 20);
 }
@@ -610,10 +634,16 @@ function fileToDataURL(file) {
 async function preprocessReceiptImage(file) {
   try {
     const bitmap = await createImageBitmap(file);
-    const MAX = 2000; // receipts are narrow — don't need huge resolution
+    // Tesseract needs text at ~20-30px tall minimum; scale up small images,
+    // cap large ones at 3000px to avoid memory issues
+    const MAX = 3000, MIN = 1200;
     let w = bitmap.width, h = bitmap.height;
-    if (w > MAX || h > MAX) {
-      const ratio = Math.min(MAX / w, MAX / h);
+    const longest = Math.max(w, h);
+    if (longest > MAX) {
+      const ratio = MAX / longest;
+      w = Math.round(w * ratio); h = Math.round(h * ratio);
+    } else if (longest < MIN) {
+      const ratio = MIN / longest;
       w = Math.round(w * ratio); h = Math.round(h * ratio);
     }
     const canvas = document.createElement('canvas');
