@@ -38,6 +38,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--lbl);
 
 /* VIEWS */
 @keyframes vfade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cardin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .view{position:absolute;inset:0 0 calc(var(--tbh) + var(--sb)) 0;
   overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--bg);display:none}
 .view.on{display:block;animation:vfade .22s cubic-bezier(.4,0,.2,1)}
@@ -78,8 +79,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--lbl);
   font-size:9px;font-weight:600;cursor:pointer;font-family:inherit;
   padding:0;letter-spacing:.05em;text-transform:uppercase;transition:color .15s}
 .tab.on{color:var(--accent)}
-.tab-ico{width:24px;height:24px;display:flex;align-items:center;justify-content:center;transition:transform .15s}
-.tab.on .tab-ico{transform:scale(1.12)}
+.tab-ico{width:28px;height:24px;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;transition:transform .18s,background .18s}
+.tab.on .tab-ico{transform:scale(1.08);background:rgba(0,122,255,.12)}
 .tab-ico svg{width:22px;height:22px;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none;stroke:currentColor}
 
 /* FAB */
@@ -94,7 +96,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--lbl);
 #fab svg{width:20px;height:20px;stroke:#fff;stroke-width:2.5;stroke-linecap:round;fill:none}
 
 /* CARDS */
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh)}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);
+  animation:cardin .32s cubic-bezier(.25,0,.4,1) both}
 
 /* SPEND CARD — dark gradient hero */
 .spend-card{
@@ -152,8 +155,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--lbl);
 .sec-list{overflow:hidden;border-radius:var(--r)}
 .lrow{display:flex;align-items:center;gap:13px;padding:13px 14px;
   background:var(--card);border-bottom:.5px solid var(--sep);cursor:pointer;
-  transition:background .12s;position:relative;z-index:1}
-.lrow:active{background:var(--fill)}
+  transition:background .12s,transform .1s;position:relative;z-index:1}
+.lrow:active{background:var(--fill);transform:scale(.985)}
 
 /* SWIPE-TO-DELETE */
 .rx-wrap{position:relative;overflow:hidden}
@@ -306,9 +309,11 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .pad{height:24px}
 
 /* SEARCH */
-.search-wrap{padding:8px 16px 4px}
+.search-wrap{padding:8px 16px 4px;position:relative}
+.search-ico{position:absolute;left:28px;top:50%;transform:translateY(-50%);
+  width:16px;height:16px;pointer-events:none;color:var(--lbl2)}
 .search-inp{width:100%;background:var(--fill);border:none;border-radius:12px;
-  padding:10px 16px;font-size:15px;color:var(--lbl);font-family:inherit;outline:none}
+  padding:10px 16px 10px 38px;font-size:15px;color:var(--lbl);font-family:inherit;outline:none}
 .search-inp::placeholder{color:var(--lbl2)}
 
 /* BOTTOM SHEET */

@@ -1451,6 +1451,7 @@ function renderReceipts(q) {
     ${totalLine}
   </div>
   <div class="search-wrap">
+    <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input class="search-inp" placeholder="Cerca scontrini…"
       value="${esc(state.searchQ)}" oninput="renderReceipts(this.value)"/>
   </div>
