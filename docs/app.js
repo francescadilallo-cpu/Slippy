@@ -1269,6 +1269,64 @@ function calcInsights(thisRx, prevRx, mo) {
   return insights.slice(0, 3);
 }
 
+// ── RENDER: CALENDAR HEATMAP ──────────────────────────────────
+function renderCalendarSection(thisRx, mo) {
+  if (thisRx.length < 2) return '';
+  const year = mo.getFullYear(), month = mo.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const now = new Date();
+  const isCurrentMonth = sameMonth(mo, now);
+
+  // Build daily totals map
+  const dayMap = {};
+  thisRx.forEach(r => {
+    const d = new Date(r.date || r.createdAt).getDate();
+    dayMap[d] = (dayMap[d] || 0) + (r.totalAmount || 0);
+  });
+  const maxDay = Math.max(...Object.values(dayMap), 1);
+
+  // Day-of-week of the 1st (0=Sun, but we use Mon-start so offset)
+  const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
+  const startOffset = firstDow === 0 ? 6 : firstDow - 1; // Mon=0
+
+  const dayNames = ['L','M','M','G','V','S','D'];
+  const header = dayNames.map(d => `<div class="cal-dname">${d}</div>`).join('');
+
+  let cells = Array(startOffset).fill(`<div class="cal-cell cal-empty"></div>`);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const amt = dayMap[d] || 0;
+    const isToday = isCurrentMonth && d === now.getDate();
+    const isFuture = isCurrentMonth && d > now.getDate();
+    const opacity = amt > 0 ? Math.max(0.15, amt / maxDay) : 0;
+    const hasSpend = amt > 0;
+    cells.push(`<div class="cal-cell ${isToday ? 'cal-today' : ''} ${isFuture ? 'cal-future' : ''}"
+      ${hasSpend ? `onclick="calDayTap(${year},${month},${d})" style="cursor:pointer" title="${fmt(amt)}"` : ''}
+      data-amt="${amt.toFixed(2)}">
+      <div class="cal-fill" style="opacity:${opacity.toFixed(2)};background:var(--accent)"></div>
+      <span class="cal-n ${hasSpend ? 'cal-has-amt' : ''}">${d}</span>
+    </div>`);
+  }
+
+  return `
+  <div class="card cal-wrap">
+    <div class="cal-hdr">
+      <span class="cal-title">Calendario Spese</span>
+      <span class="cal-legend"><span class="cal-legend-dot"></span>= spesa</span>
+    </div>
+    <div class="cal-grid">
+      ${header}
+      ${cells.join('')}
+    </div>
+  </div>`;
+}
+
+function calDayTap(year, month, day) {
+  const d = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  state.filterCat = null;
+  gotoTab('r');
+  renderReceipts(d.slice(0, 7));
+}
+
 // ── RENDER: BUDGET SECTION ────────────────────────────────────
 function renderBudgetSection(spent, budget) {
   if (!budget || budget <= 0) return '';
@@ -1475,6 +1533,7 @@ function renderDashboard() {
   </div>` : '';
 
   const forecastSection   = renderForecastSection(thisRx, mo);
+  const calendarSection   = renderCalendarSection(thisRx, mo);
   const topStoresSection  = renderTopStoresSection(thisRx);
   const yearlySection     = renderYearlySection();
 
@@ -1527,6 +1586,7 @@ function renderDashboard() {
   </div>
   ${forecastSection}
   ${weekSection}
+  ${calendarSection}
   ${budgetSection}
   ${insightSection}
   ${sparkSection}
