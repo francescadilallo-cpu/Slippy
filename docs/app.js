@@ -438,34 +438,22 @@ function categorize(storeName) {
 
 // ── OCR TEXT PARSING ──────────────────────────────────────────
 function extractStoreName(lines) {
-  // Lines that are clearly NOT the store name
-  const skipRe = /SCONTRINO|RICEVUTA|FISCALE|CODICE|P\.IVA|C\.F\b|VAT\b|TEL\.?[\s:]|FAX|WWW\.|HTTP|@|VIA |CORSO |PIAZZA |LARGO |VIALE |N\.\s*\d|\*{3}|CASSA\b|OPERATORE|MATRICOLA|REGISTRATORE|DOCUMENTO|COMMERCIALE|ESERCIZIO|DATA\b|ORA\b|ORE\b|\d{2}:\d{2}/i;
+  const skipRe = /P\.?\s*IVA|C\.?\s*F\.?\s*[:.]|VAT\b|TEL\.?\s*\d|FAX\b|WWW\.|HTTP|[@]|\bVIA\b|\bV\.LE\b|\bCORSO\b|\bC\.SO\b|\bPIAZZA\b|\bP\.ZA\b|\bVIALE\b|\bLARGO\b|\d{5}\s+[A-Z]|SCONTRINO|RICEVUTA\s+FISC|OPERATORE|MATRICOLA|REGISTRATORE|DOCUMENTO\s+COMM|\d{2}:\d{2}/i;
   const amtRe  = /\d{1,4}[.,]\d{2}/;
-  const dateRe = /\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/;
+  const dateRe = /\d{2}[\/\-.]\d{2}[\/\-.]\d{2}/;
 
-  // Score each line in the first 12: prefer all-caps, longer, earlier
-  const candidates = [];
-  for (let i = 0; i < Math.min(12, lines.length); i++) {
-    const raw = lines[i];
-    const t   = raw.trim().replace(/[|\\*#_]/g, '').trim();
-    if (t.length < 3) continue;
+  for (const l of lines.slice(0, 8)) {
+    // Strip border characters OCR picks up (|, *, -, =, _)
+    const t = l.trim().replace(/^[*|=\-_\s]+|[*|=\-_\s]+$/g, '').trim();
+    if (t.length < 2) continue;
     if (skipRe.test(t) || amtRe.test(t) || dateRe.test(t)) continue;
-    // Favour lines that are mostly letters
-    const letterRatio = (t.match(/[A-Za-zÀ-ú]/g) || []).length / t.length;
-    if (letterRatio < 0.4) continue;
-    const isAllCaps = t === t.toUpperCase() && /[A-Z]{2,}/.test(t);
-    const score = (isAllCaps ? 10 : 0) + t.length - i * 2;
-    candidates.push({ t, isAllCaps, score });
-  }
-  candidates.sort((a, b) => b.score - a.score);
-  if (candidates.length) {
-    const best = candidates[0];
-    if (best.isAllCaps) {
-      // Title-case: ESSELUNGA → Esselunga
-      return best.t[0].toUpperCase() + best.t.slice(1).toLowerCase()
-        .replace(/\b([a-z])/g, c => c.toUpperCase());
+    if (!/[A-Za-zÀ-ú]{2,}/.test(t)) continue; // must have real letters
+    // All-caps → title-case
+    if (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) {
+      return t[0].toUpperCase() + t.slice(1).toLowerCase()
+        .replace(/\b([a-zà-ú])/g, c => c.toUpperCase());
     }
-    return best.t;
+    return t;
   }
   return 'Negozio';
 }
@@ -505,33 +493,40 @@ function extractTotal(lines) {
 }
 
 function extractDate(lines) {
-  // Italian fiscal receipts print the transaction date near the BOTTOM
-  // (just above the fiscal code / "DOCUMENTO COMMERCIALE" line).
-  // Scan bottom-up so we hit the real transaction date first.
-  const patterns = [
-    { re: /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/, yIdx: 3, mIdx: 2, dIdx: 1 }, // dd/mm/yyyy
-    { re: /(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/, yIdx: 1, mIdx: 2, dIdx: 3 }, // yyyy-mm-dd
-    { re: /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2})\b/, yIdx: 3, mIdx: 2, dIdx: 1 }, // dd/mm/yy
-  ];
   const today = new Date();
-  // First pass: bottom half of receipt (transaction date lives here)
-  const bottomHalf = lines.slice(Math.floor(lines.length / 2));
-  for (let pass = 0; pass < 2; pass++) {
-    const pool = pass === 0 ? [...bottomHalf].reverse() : [...lines].reverse();
-    for (const l of pool) {
-      for (const { re, yIdx, mIdx, dIdx } of patterns) {
-        const m = l.match(re);
-        if (!m) continue;
-        let year = +m[yIdx], month = +m[mIdx], day = +m[dIdx];
-        if (year < 100) year += 2000;
-        if (month < 1 || month > 12 || day < 1 || day > 31) continue;
-        const d = new Date(year, month - 1, day);
-        if (!isNaN(d.getTime()) && year >= 2000 && d <= today) {
-          return d.toISOString().split('T')[0];
-        }
-      }
-    }
+
+  function tryParseDMY(str) {
+    const m = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+    if (!m) return null;
+    let d = +m[1], mo = +m[2], y = +m[3];
+    if (y < 100) y += 2000;
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2000) return null;
+    const dt = new Date(y, mo - 1, d);
+    return (!isNaN(dt) && dt <= today) ? dt : null;
   }
+
+  function tryParseYMD(str) {
+    const m = str.match(/(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/);
+    if (!m) return null;
+    const y = +m[1], mo = +m[2], d = +m[3];
+    if (mo < 1 || mo > 12 || d < 1 || d > 31 || y < 2000) return null;
+    const dt = new Date(y, mo - 1, d);
+    return (!isNaN(dt) && dt <= today) ? dt : null;
+  }
+
+  // Pass 1: lines that also have a time — these are transaction timestamps
+  for (const l of lines) {
+    if (!/\d{2}:\d{2}/.test(l)) continue;
+    const dt = tryParseDMY(l) || tryParseYMD(l);
+    if (dt) return dt.toISOString().split('T')[0];
+  }
+
+  // Pass 2: any line with a date
+  for (const l of lines) {
+    const dt = tryParseDMY(l) || tryParseYMD(l);
+    if (dt) return dt.toISOString().split('T')[0];
+  }
+
   return today.toISOString().split('T')[0];
 }
 
