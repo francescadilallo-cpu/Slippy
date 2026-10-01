@@ -765,11 +765,11 @@ function renderScannerPickerOverlay() {
   <div class="scan-pick">
     <div class="scan-pick-ico">🧾</div>
     <div class="scan-btns">
-      <button class="btn btn-p" onclick="triggerCapture(true)">Use Camera</button>
-      <button class="btn btn-s" onclick="triggerCapture(false)">Choose from Library</button>
+      <button class="btn btn-p" onclick="triggerCapture(true)">Usa Fotocamera</button>
+      <button class="btn btn-s" onclick="triggerCapture(false)">Scegli dalla Libreria</button>
     </div>
     <p style="font-size:13px;color:var(--lbl2);margin-top:8px;line-height:1.6;text-align:center">
-      OCR runs in-browser — no upload, fully private.
+      OCR elaborato nel browser — nessun upload, completamente privato.
     </p>
   </div>`;
   openOverlay('oscanner', html);
@@ -1167,6 +1167,64 @@ function renderSparkSection(data) {
   </div>`;
 }
 
+// ── RENDER: YEARLY SUMMARY ────────────────────────────────────
+function renderYearlySection() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const yearRx = state.receipts.filter(r => new Date(r.date||r.createdAt).getFullYear() === year);
+  if (yearRx.length < 6) return '';
+
+  const yearTotal = yearRx.reduce((s,r)=>s+(r.totalAmount||0),0);
+
+  const monthMap = {};
+  yearRx.forEach(r => {
+    const m = new Date(r.date||r.createdAt).getMonth();
+    monthMap[m] = (monthMap[m]||0) + (r.totalAmount||0);
+  });
+  const monthCount = Object.keys(monthMap).length;
+  if (monthCount < 3) return '';
+
+  const avgMonthly = yearTotal / monthCount;
+  const [worstM, worstAmt] = Object.entries(monthMap).sort((a,b)=>b[1]-a[1])[0];
+  const worstName = new Date(year, +worstM, 1)
+    .toLocaleDateString('it-IT',{month:'long'});
+  const worstNameCap = worstName[0].toUpperCase() + worstName.slice(1);
+
+  const catMap = {};
+  yearRx.forEach(r => { catMap[r.category] = (catMap[r.category]||0) + (r.totalAmount||0); });
+  const [topCatId] = Object.entries(catMap).sort((a,b)=>b[1]-a[1])[0] || [];
+  const topCat = topCatId ? catById(topCatId) : null;
+
+  return `
+  <div class="card yearly-card">
+    <div class="yearly-hdr">Riepilogo ${year}</div>
+    <div class="yearly-stats">
+      <div class="ys-item">
+        <div class="ys-val">${fmt(yearTotal)}</div>
+        <div class="ys-lbl">Totale anno</div>
+      </div>
+      <div class="ys-divider"></div>
+      <div class="ys-item">
+        <div class="ys-val">${yearRx.length}</div>
+        <div class="ys-lbl">Scontrini</div>
+      </div>
+      <div class="ys-divider"></div>
+      <div class="ys-item">
+        <div class="ys-val">${fmt(avgMonthly)}</div>
+        <div class="ys-lbl">Media/mese</div>
+      </div>
+    </div>
+    ${topCat ? `<div class="yearly-row">
+      <span>${topCat.icon} Categoria principale</span>
+      <strong>${topCat.name}</strong>
+    </div>` : ''}
+    <div class="yearly-row">
+      <span>📈 Mese più costoso</span>
+      <strong>${worstNameCap} · ${fmt(+worstAmt)}</strong>
+    </div>
+  </div>`;
+}
+
 // ── RENDER: DASHBOARD ─────────────────────────────────────────
 function renderDashboard() {
   const el = document.getElementById('vd');
@@ -1249,6 +1307,7 @@ function renderDashboard() {
 
   const forecastSection   = renderForecastSection(thisRx, mo);
   const topStoresSection  = renderTopStoresSection(thisRx);
+  const yearlySection     = renderYearlySection();
 
   el.innerHTML = `
   <div class="nav brand-nav">
@@ -1278,6 +1337,7 @@ function renderDashboard() {
   ${budgetSection}
   ${insightSection}
   ${sparkSection}
+  ${yearlySection}
   ${chartSection}
   ${topStoresSection}
   ${aiMonthCard}
