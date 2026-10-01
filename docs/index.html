@@ -364,6 +364,26 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .sht.on{transform:translateY(0)}
 .sht-knob{width:36px;height:4px;background:var(--fill2);border-radius:2px;margin:12px auto 8px}
 
+/* CALENDAR HEATMAP */
+.cal-wrap{margin:10px 16px 0;padding:14px 16px 16px;background:var(--card);border-radius:var(--r)}
+.cal-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.cal-title{font-size:11px;font-weight:700;color:var(--lbl2);text-transform:uppercase;letter-spacing:.07em}
+.cal-legend{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--lbl2)}
+.cal-legend-dot{width:10px;height:10px;border-radius:3px;background:var(--accent);opacity:.6}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-dname{font-size:9px;font-weight:700;color:var(--lbl2);text-align:center;padding:2px 0 4px}
+.cal-cell{position:relative;aspect-ratio:1;border-radius:5px;overflow:hidden;
+  background:var(--fill2);display:flex;align-items:center;justify-content:center}
+.cal-cell:not(.cal-empty):not(.cal-future):active{transform:scale(.92);transition:transform .1s}
+.cal-fill{position:absolute;inset:0;border-radius:5px}
+.cal-n{position:relative;font-size:9px;font-weight:600;color:var(--lbl2);line-height:1;z-index:1}
+.cal-n.cal-has-amt{color:var(--lbl);font-weight:700}
+.cal-empty{background:transparent}
+.cal-future{opacity:.35}
+.cal-today .cal-n{color:#fff;font-weight:800}
+.cal-today::before{content:'';position:absolute;inset:0;border:2px solid var(--accent);border-radius:5px;z-index:2}
+.cal-today .cal-fill{background:var(--accent)!important;opacity:.85!important}
+
 /* BUDGET */
 .budget-wrap{margin:10px 16px 0;padding:16px;background:var(--card);border-radius:var(--r);
   display:flex;align-items:center;gap:16px;border-left:3px solid var(--accent)}
