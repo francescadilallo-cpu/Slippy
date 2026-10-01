@@ -256,8 +256,11 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .srow:first-of-type{border-radius:var(--r) var(--r) 0 0}
 .srow:last-child{border-radius:0 0 var(--r) var(--r);border-bottom:none}
 .srow:only-child{border-radius:var(--r);border-bottom:none}
-.slbl{font-size:15px;flex-shrink:0}
-.sval{font-size:15px;color:var(--lbl2);flex:1;text-align:right}
+.slbl{font-size:15px;flex-shrink:0;flex:1}
+.sval{font-size:15px;color:var(--lbl2);text-align:right;flex-shrink:0}
+.si-row{padding:12px 16px}
+.si-ico{width:30px;height:30px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:15px}
 .kinp{flex:1;background:none;border:none;outline:none;
   font-size:13px;font-family:'Menlo','SF Mono',monospace;color:var(--accent);
   text-align:right;padding:0}
@@ -427,6 +430,19 @@ select.finp{-webkit-appearance:none;cursor:pointer}
   color:#fff;font-size:16px;font-weight:700;letter-spacing:-.2px;cursor:pointer;
   box-shadow:0 4px 20px rgba(0,122,255,.4)}
 .welcome-hint{text-align:center;font-size:13px;color:var(--lbl2);padding:0 16px;line-height:1.5}
+
+/* SETTINGS BRAND FOOTER */
+.settings-brand{text-align:center;padding:28px 16px 8px;display:flex;
+  flex-direction:column;align-items:center;gap:6px}
+.settings-brand-ico{width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(135deg,#007AFF 0%,#5E5CE6 100%);
+  display:flex;align-items:center;justify-content:center;margin-bottom:2px;
+  color:#fff;font-size:24px;font-weight:900;font-style:italic;line-height:1;
+  box-shadow:0 4px 16px rgba(0,122,255,.3)}
+.settings-brand-name{font-size:18px;font-weight:800;letter-spacing:-.5px;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent-end) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.settings-brand-tag{font-size:12px;color:var(--lbl2);letter-spacing:.1px}
 </style>
 </head>
 <body>
