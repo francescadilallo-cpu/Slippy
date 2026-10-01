@@ -401,7 +401,7 @@ function closeImage() {
 
 // ── CATEGORIZE ────────────────────────────────────────────────
 function autoCategory(storeName) {
-  const sel = document.getElementById('mc');
+  const sel = document.getElementById('mc') || document.getElementById('fc');
   if (sel) sel.value = categorize(storeName);
 }
 
@@ -630,7 +630,7 @@ function renderOCRPreview(parsed, imgURL) {
     <div class="fsec">
       <div class="fhdr">Negozio</div>
       <div class="frow" style="border-radius:var(--r)">
-        <input class="finp" style="text-align:left;flex:1" id="fn" value="${esc(parsed.storeName)}" placeholder="Nome negozio"/>
+        <input class="finp" style="text-align:left;flex:1" id="fn" value="${esc(parsed.storeName)}" placeholder="Nome negozio" oninput="autoCategory(this.value)"/>
       </div>
     </div>
     <div class="fsec">
@@ -1223,7 +1223,8 @@ function calcInsights(thisRx, prevRx, mo) {
     const diff = ((thisTotal - prevTotal) / prevTotal * 100).toFixed(0);
     const sign = diff > 0 ? 'in più' : 'in meno';
     const color = diff > 0 ? 'var(--red)' : 'var(--green)';
-    insights.push({ color, text: `Stai spendendo ${Math.abs(diff)}% ${sign} rispetto al mese scorso` });
+    const icon = diff > 0 ? '📈' : '📉';
+    insights.push({ color, icon, text: `Stai spendendo ${Math.abs(diff)}% ${sign} rispetto al mese scorso` });
   }
 
   // 2. Categoria dominante
@@ -1235,7 +1236,7 @@ function calcInsights(thisRx, prevRx, mo) {
       const pct = Math.round(top[1] / thisTotal * 100);
       const cat = catById(top[0]);
       if (pct >= 25) {
-        insights.push({ color: cat.color, text: `${cat.name} è il ${pct}% della tua spesa questo mese` });
+        insights.push({ color: cat.color, icon: cat.icon, text: `${cat.name} è il ${pct}% della tua spesa questo mese` });
       }
     }
   }
@@ -1247,7 +1248,7 @@ function calcInsights(thisRx, prevRx, mo) {
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     if (dayOfMonth >= 5 && dayOfMonth <= daysInMonth - 3) {
       const forecast = Math.round((thisTotal / dayOfMonth) * daysInMonth);
-      insights.push({ color: 'var(--accent)', text: `Al ritmo attuale spenderai circa ${fmt(forecast)} questo mese` });
+      insights.push({ color: 'var(--accent)', icon: '🔮', text: `Al ritmo attuale spenderai circa ${fmt(forecast)} questo mese` });
     }
   }
 
@@ -1257,7 +1258,7 @@ function calcInsights(thisRx, prevRx, mo) {
     thisRx.forEach(r => { const s = r.storeName || 'Negozio'; storeCounts[s] = (storeCounts[s] || 0) + 1; });
     const topStore = Object.entries(storeCounts).sort((a, b) => b[1] - a[1])[0];
     if (topStore && topStore[1] >= 2) {
-      insights.push({ color: 'var(--purple)', text: `${topStore[0]}: ${topStore[1]} visite questo mese` });
+      insights.push({ color: 'var(--purple)', icon: '🏪', text: `${topStore[0]}: ${topStore[1]} visite questo mese` });
     }
   }
 
@@ -1303,7 +1304,7 @@ function renderInsightsSection(insights) {
   if (!insights || insights.length === 0) return '';
   const rows = insights.map(ins => `
     <div class="insight-row">
-      <div class="insight-dot" style="background:${ins.color}"></div>
+      <div class="insight-ico" style="background:${ins.color}20;color:${ins.color}">${ins.icon || '●'}</div>
       <div class="insight-txt">${esc(ins.text)}</div>
     </div>`).join('');
   return `
@@ -1857,7 +1858,7 @@ function renderSettings() {
     <div class="srow si-row">
       <div class="si-ico" style="background:#5E5CE622">✦</div>
       <span class="slbl">Versione</span>
-      <span class="sval">2.0 PWA</span>
+      <span class="sval">3.0 PWA</span>
     </div>
     <div class="srow si-row">
       <div class="si-ico" style="background:#34C75922">🔬</div>
