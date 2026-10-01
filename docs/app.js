@@ -1273,7 +1273,7 @@ function renderReceipts(q) {
               <div class="rn">${esc(r.storeName || 'Store')}${badge}</div>
               <div class="rs">${r.imageDataURL ? `${cat.icon} ` : ''}${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}${r.note ? `<span class="note-pip"> · 📝</span>` : ''}</div>
             </div>
-            <div class="ra">${fmt(r.totalAmount || 0)}</div>
+            <div class="ra" style="color:${cat.color}">${fmt(r.totalAmount || 0)}</div>
           </div>
         </div>`;
       });
@@ -1312,6 +1312,7 @@ function renderReceipts(q) {
 function buildDetailHTML(id) {
   const r = state.receipts.find(x => x.id === id);
   if (!r) return null;
+  const cat = catById(r.category);
 
   const chipsHTML = CATS.map(c => `
   <button class="chip ${c.id === r.category ? 'sel' : ''}"
@@ -1360,11 +1361,20 @@ function buildDetailHTML(id) {
     </div>
   </div>
   <div style="padding-bottom:48px">
-    ${r.imageDataURL ? `<img src="${r.imageDataURL}" class="img-thumb" style="margin:12px auto;cursor:zoom-in" onclick="openImage('${id}')"/>` : ''}
-    <div class="card det-hdr">
-      <div class="det-store">${esc(r.storeName || 'Store')}</div>
-      <div class="det-date">${fmtDate(r.date || r.createdAt)}</div>
-      <div class="det-total">${fmt(r.totalAmount || 0)}</div>
+    <div class="det-hero" style="--cat:${cat.color}">
+      <div class="det-hero-top">
+        <div class="det-hero-ico">${cat.icon}</div>
+        <div>
+          <div class="det-hero-store">${esc(r.storeName || 'Store')}</div>
+          <div class="det-hero-cat">${esc(cat.name)}</div>
+        </div>
+      </div>
+      <div class="det-hero-amt">${fmt(r.totalAmount || 0)}</div>
+      <div class="det-hero-date">${fmtDate(r.date || r.createdAt)}</div>
+      ${r.imageDataURL ? `<div class="det-hero-thumb" onclick="openImage('${id}')">
+        <img src="${r.imageDataURL}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;opacity:.85"/>
+        <span style="font-size:11px;color:rgba(255,255,255,.55);margin-top:4px">Vedi foto</span>
+      </div>` : ''}
     </div>
     ${r.note ? `<div class="det-note">${esc(r.note)}</div>` : ''}
     <div class="det-sec" style="margin-top:14px">
