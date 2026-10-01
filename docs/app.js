@@ -460,7 +460,11 @@ function extractStoreName(lines) {
   const dateRe  = /\d{2}[\/\-.]\d{2}[\/\-.]\d{2}/;
 
   function clean(l) {
-    return l.trim().replace(/^[*|=\-_\s]+|[*|=\-_\s]+$/g, '').trim();
+    let s = l.trim().replace(/^[*|=\-_\s]+|[*|=\-_\s]+$/g, '').trim();
+    // Strip legal suffixes: S.p.A., S.r.l., S.n.c., S.a.s., S.c. etc.
+    s = s.replace(/\s+S\.[rpnas]\.[Aaclr]\S*\.?\s*$/i, '').trim();
+    // Strip lowercase article prefix: "la " / "il " / "lo " → still usable but normalise
+    return s;
   }
   function isGood(t) {
     if (t.length < 2) return false;
@@ -527,11 +531,15 @@ function extractTotal(lines) {
     const m = l.match(/€\s*(\d{1,4}[.,]\d{2})/);
     if (m) return parseFloat(m[1].replace(',', '.'));
   }
-  // Last fallback: largest amount in the whole receipt
+  // Last fallback: largest amount in the whole receipt (also catch "9 90" space-decimal)
   let max = 0;
+  const amtReLoose = /(\d{1,4})[.,\s](\d{2})(?=\s|$)/;
   for (const l of lines) {
-    const m = l.match(amtRe);
-    if (m) { const v = parseFloat(m[1].replace(',', '.')); if (v > max) max = v; }
+    let m = l.match(amtRe) || l.match(amtReLoose);
+    if (m) {
+      const v = m[2] ? parseFloat(m[1] + '.' + m[2]) : parseFloat(m[1].replace(',', '.'));
+      if (v > max && v < 10000) max = v;
+    }
   }
   return max;
 }
@@ -606,10 +614,10 @@ function extractItems(lines) {
 }
 
 function parseOCRText(text) {
-  // Normalise common OCR errors: l→1 in amounts, O→0 in amounts
   const cleaned = text
-    .replace(/(\d)[lL](\d{2})\b/g, '$10$2')   // 5l50 → 5.50
-    .replace(/\bO(\d{2})\b/g, '0$1');           // O50 → 050
+    .replace(/(\d)[lL](\d{2})\b/g, '$10$2')          // 5l50 → 5.50 (OCR l/1 confusion)
+    .replace(/\bO(\d{2})\b/g, '0$1')                  // O50 → 050
+    .replace(/\b(\d{1,4}) (\d{2})(?=\s|$)/gm, '$1,$2'); // "9 90" → "9,90" (space-as-comma)
   const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
   return {
     storeName: extractStoreName(lines),
@@ -654,8 +662,8 @@ async function preprocessReceiptImage(file) {
     // Gentler than hard threshold — handles angled/uneven-lit receipts better
     for (let i = 0; i < d.length; i += 4) {
       const g = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
-      // Stretch contrast 1.6× around mid-grey
-      const stretched = Math.min(255, Math.max(0, (g - 128) * 1.6 + 128));
+      // Stretch contrast 1.3× around mid-grey (gentler — preserves faint numbers)
+      const stretched = Math.min(255, Math.max(0, (g - 128) * 1.3 + 128));
       d[i] = d[i+1] = d[i+2] = stretched;
     }
     ctx.putImageData(imgData, 0, 0);
