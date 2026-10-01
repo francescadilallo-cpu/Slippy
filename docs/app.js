@@ -278,6 +278,26 @@ function haptic(type = 'light') {
   if (patterns[type]) navigator.vibrate(patterns[type]);
 }
 
+// ── CONFIRM BOTTOM SHEET ──────────────────────────────────────
+let _confirmCb = null;
+function confirmSheet(message, label, cb, danger = true) {
+  _confirmCb = cb;
+  openSheet(`
+  <div style="padding:4px 0 8px">
+    <div style="font-size:16px;font-weight:600;text-align:center;padding:0 16px 4px;color:var(--lbl);line-height:1.45">${esc(message)}</div>
+    <div class="scan-btns" style="margin-top:18px">
+      <button class="btn ${danger ? 'btn-d' : 'btn-p'}" onclick="_runConfirm()">${esc(label)}</button>
+      <button class="btn btn-s" onclick="closeSheet()">Annulla</button>
+    </div>
+  </div>`);
+}
+function _runConfirm() {
+  const cb = _confirmCb;
+  _confirmCb = null;
+  closeSheet();
+  setTimeout(() => cb && cb(), 30);
+}
+
 // ── BOTTOM SHEET ──────────────────────────────────────────────
 function openSheet(html) {
   const body = document.getElementById('sht-body');
@@ -619,9 +639,15 @@ function saveReceiptFromForm() {
 
   // Duplicate detection
   if (isDuplicate(name, total)) {
-    if (!confirm('Sembra un duplicato. Salvare comunque?')) return;
+    confirmSheet('Questo scontrino sembra un duplicato. Salvare comunque?', 'Salva Comunque',
+      () => _doSaveFromForm(name, total, date, catId, note), false);
+    return;
   }
 
+  _doSaveFromForm(name, total, date, catId, note);
+}
+
+function _doSaveFromForm(name, total, date, catId, note) {
   const items = [];
   let i = 0;
   while (document.getElementById('itn' + i)) {
@@ -715,20 +741,24 @@ function saveManualEntry() {
   if (!total) { toast('Inserisci il totale'); return; }
 
   if (isDuplicate(name, total)) {
-    if (!confirm('Sembra un duplicato. Salvare comunque?')) return;
+    confirmSheet('Questo scontrino sembra un duplicato. Salvare comunque?', 'Salva Comunque', () => {
+      _doSaveManual(name, total, date, catId, note);
+    }, false);
+    return;
   }
+  _doSaveManual(name, total, date, catId, note);
+}
 
+function _doSaveManual(name, total, date, catId, note) {
   const receipt = {
     id: uid(), storeName: name, totalAmount: total,
     date, createdAt: new Date().toISOString(),
     category: catId, items: [], rawText: '', imageDataURL: null,
     note: note || undefined,
   };
-
   state.receipts.unshift(receipt);
   persist();
   if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
-
   haptic('medium');
   closeOverlay('oscanner');
   toast('Scontrino salvato!');
@@ -862,13 +892,15 @@ function handleRowTap(id) {
 }
 
 function quickDelete(id) {
-  haptic('heavy');
-  if (!confirm('Eliminare questo scontrino?')) return;
-  state.receipts = state.receipts.filter(x => x.id !== id);
-  persist();
-  toast('Scontrino eliminato');
-  renderDashboard();
-  renderReceipts();
+  haptic('medium');
+  confirmSheet('Eliminare questo scontrino?', 'Elimina', () => {
+    haptic('heavy');
+    state.receipts = state.receipts.filter(x => x.id !== id);
+    persist();
+    toast('Scontrino eliminato');
+    renderDashboard();
+    renderReceipts();
+  });
 }
 
 // ── CATEGORY FILTER ───────────────────────────────────────────
@@ -1615,15 +1647,17 @@ function setCategory(id, catId) {
 }
 
 function confirmDelete(id) {
-  haptic('heavy');
-  if (!confirm('Eliminare questo scontrino? Non sarà possibile annullare.')) return;
-  state.receipts = state.receipts.filter(x => x.id !== id);
-  persist();
-  closeOverlay('odetail');
-  toast('Scontrino eliminato');
-  renderDashboard();
-  if (state.tab === 'r') renderReceipts();
-  else if (state.tab === 's') renderSettings();
+  haptic('medium');
+  confirmSheet('Eliminare questo scontrino? Non sarà possibile annullare.', 'Elimina', () => {
+    haptic('heavy');
+    state.receipts = state.receipts.filter(x => x.id !== id);
+    persist();
+    closeOverlay('odetail');
+    toast('Scontrino eliminato');
+    renderDashboard();
+    if (state.tab === 'r') renderReceipts();
+    else if (state.tab === 's') renderSettings();
+  });
 }
 
 // ── RENDER: SETTINGS ─────────────────────────────────────────
@@ -1759,14 +1793,17 @@ function exportCSV() {
   toast('CSV esportato!');
 }
 function clearAllData() {
-  if (!confirm(`Eliminare tutti i ${state.receipts.length} scontrini? Non sarà possibile annullare.`)) return;
-  state.receipts = [];
-  state.aiTips   = {};
-  persist();
-  toast('Dati eliminati');
-  renderDashboard();
-  renderReceipts();
-  renderSettings();
+  haptic('medium');
+  confirmSheet(`Eliminare tutti i ${state.receipts.length} scontrini? Non sarà possibile annullare.`, 'Elimina tutto', () => {
+    haptic('heavy');
+    state.receipts = [];
+    state.aiTips   = {};
+    persist();
+    toast('Dati eliminati');
+    renderDashboard();
+    renderReceipts();
+    renderSettings();
+  });
 }
 
 // ── CLAUDE API ────────────────────────────────────────────────
