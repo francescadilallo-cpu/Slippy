@@ -511,16 +511,20 @@ function extractTotal(lines) {
   const totalRe = /TOTALE\s*(COMPLESS|DOVUTO|A PAGARE|EUR|€)?|TOTAL(?!\s*IVA|\s*PARZ|\s*SUBT)|TOT\.?\s*€?|DA\s+PAGARE|IMPORTO\s+(TOT|DOVUTO|PAGATO)|NETTO\s+A\s+PAGARE|AMOUNT\s+DUE|GRAND\s+TOTAL/i;
   const amtRe = /(\d{1,4}[.,]\d{2})/;
 
+  // Normalize each line locally too (space-decimal fix)
+  const norm = l => l.replace(/\b(\d{1,4}) (\d{2})(?=\s|€|$)/g, '$1,$2');
+
   // Scan from bottom up — totals appear near the end
   for (let i = lines.length - 1; i >= 0; i--) {
-    const l = lines[i];
+    const l = norm(lines[i]);
     if (totalRe.test(l)) {
       // Amount on same line?
       const m = l.match(amtRe);
       if (m) return parseFloat(m[1].replace(',', '.'));
-      // Amount on next line?
-      if (i + 1 < lines.length) {
-        const m2 = lines[i + 1].match(amtRe);
+      // Amount on next line or previous line?
+      for (const neighbor of [lines[i+1], lines[i-1]]) {
+        if (!neighbor) continue;
+        const m2 = norm(neighbor).match(amtRe);
         if (m2) return parseFloat(m2[1].replace(',', '.'));
       }
     }
@@ -716,6 +720,13 @@ async function runOCR(file) {
   parsed.imgDataURL = imgURL;
   state.ocrData = parsed;
   renderOCRPreview(parsed, imgURL);
+  if (!parsed.total) {
+    setTimeout(() => {
+      const ft = document.getElementById('ft');
+      if (ft) { ft.style.borderColor = 'var(--orange,#FF9500)'; ft.focus(); }
+      toast('Totale non riconosciuto — inseriscilo manualmente');
+    }, 300);
+  }
 }
 
 function processingScreenHTML(pct) {
@@ -841,10 +852,8 @@ function renderOCRPreview(parsed, imgURL) {
     <button class="btn btn-p" onclick="saveReceiptFromForm()">Salva Scontrino</button>
     ${parsed.rawText ? `
     <div class="fsec" style="margin-top:8px">
-      <details class="ocr-raw-wrap">
-        <summary class="ocr-raw-toggle">🔍 Testo riconosciuto (debug)</summary>
-        <pre class="ocr-raw">${esc(parsed.rawText.slice(0, 800))}</pre>
-      </details>
+      <div class="fhdr" style="margin-bottom:4px">🔍 Testo OCR grezzo</div>
+      <pre class="ocr-raw">${esc(parsed.rawText.slice(0, 1000))}</pre>
     </div>` : ''}
     <div class="pad"></div>
   </div>`;
