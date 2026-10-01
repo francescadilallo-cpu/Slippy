@@ -755,10 +755,13 @@ function openManualEntry() {
     </div>
     <div class="fsec">
       <div class="fhdr">Totale</div>
-      <div class="frow" style="border-radius:var(--r)">
+      <div class="frow" style="border-radius:var(--r) var(--r) 0 0">
         <span class="flbl">€</span>
         <input class="finp" id="mt" type="number" step="0.01"
           placeholder="0.00" inputmode="decimal"/>
+      </div>
+      <div class="qa-row">
+        ${[5,10,15,20,30,50].map(v => `<button type="button" class="qa-chip" onclick="setQuickAmt('mt',${v})">€${v}</button>`).join('')}
       </div>
     </div>
     <div class="fsec">
@@ -791,6 +794,11 @@ function openManualEntry() {
     <button class="btn btn-p" onclick="saveManualEntry()">Salva Scontrino</button>
     <div class="pad"></div>
   </div>`);
+}
+
+function setQuickAmt(id, val) {
+  const el = document.getElementById(id);
+  if (el) { el.value = val.toFixed(2); el.focus(); }
 }
 
 function saveManualEntry() {
