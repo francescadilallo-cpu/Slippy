@@ -438,33 +438,53 @@ function categorize(storeName) {
 
 // ── OCR TEXT PARSING ──────────────────────────────────────────
 function extractStoreName(lines) {
-  const skip = /SCONTRINO|RICEVUTA|FISCALE|CODICE|P\.IVA|C\.F\.|VAT|TEL|FAX|VIA |CORSO |PIAZZA |\*/i;
-  // Prefer all-caps lines (typical store headers on Italian receipts)
-  for (const l of lines.slice(0, 8)) {
-    const t = l.trim();
-    if (t.length > 2 && !/^\d/.test(t) && !skip.test(t) && t === t.toUpperCase() && /[A-Z]/.test(t)) {
-      return t[0] + t.slice(1).toLowerCase(); // Title-case it
+  const skip = /SCONTRINO|RICEVUTA|FISCALE|CODICE|P\.IVA|C\.F\.|C\.F |VAT|TEL|FAX|WWW\.|HTTP|VIA |CORSO |PIAZZA |LARGO |N\.\s*\d|\*{3}|CASSA|OPERATORE|MATRICOLA|REGISTRATORE/i;
+  const amtRe = /\d{1,4}[.,]\d{2}/;
+  // Prefer all-caps multi-word lines (typical Italian receipt headers)
+  for (const l of lines.slice(0, 10)) {
+    const t = l.trim().replace(/[^\w\s&'.'-]/g, '').trim();
+    if (t.length < 3 || /^\d/.test(t) || skip.test(t) || amtRe.test(t)) continue;
+    if (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) {
+      return t[0] + t.slice(1).toLowerCase().replace(/\b(\w)/g, c => c.toUpperCase());
     }
   }
-  // Fallback: first non-numeric, non-skip line
-  for (const l of lines.slice(0, 6)) {
+  // Fallback: first clean non-numeric non-skip line
+  for (const l of lines.slice(0, 8)) {
     const t = l.trim();
-    if (t.length > 2 && !/^\d/.test(t) && !skip.test(t)) return t;
+    if (t.length > 2 && !/^\d/.test(t) && !skip.test(t) && !amtRe.test(t)) return t;
   }
   return 'Negozio';
 }
 
 function extractTotal(lines) {
+  // Keywords that signal the total on Italian/generic receipts
+  const totalRe = /TOTALE\s*(COMPLESS|DOVUTO|A PAGARE|EUR|€)?|TOTAL(?!\s*IVA|\s*PARZ|\s*SUBT)|TOT\.?\s*€?|DA\s+PAGARE|IMPORTO\s+(TOT|DOVUTO|PAGATO)|NETTO\s+A\s+PAGARE|AMOUNT\s+DUE|GRAND\s+TOTAL/i;
+  const amtRe = /(\d{1,4}[.,]\d{2})/;
+
+  // Scan from bottom up — totals appear near the end
   for (let i = lines.length - 1; i >= 0; i--) {
     const l = lines[i];
-    if (/TOTALE|TOTAL(?!\s*IVA)|TOT\b|DA PAGARE|IMPORTO|PAGAMENTO/i.test(l)) {
-      const m = l.match(/(\d{1,4}[.,]\d{2})/);
+    if (totalRe.test(l)) {
+      // Amount on same line?
+      const m = l.match(amtRe);
       if (m) return parseFloat(m[1].replace(',', '.'));
+      // Amount on next line?
+      if (i + 1 < lines.length) {
+        const m2 = lines[i + 1].match(amtRe);
+        if (m2) return parseFloat(m2[1].replace(',', '.'));
+      }
     }
   }
+  // Also try: line with "€" followed by amount near end
+  for (let i = lines.length - 1; i >= Math.max(0, lines.length - 15); i--) {
+    const l = lines[i];
+    const m = l.match(/€\s*(\d{1,4}[.,]\d{2})/);
+    if (m) return parseFloat(m[1].replace(',', '.'));
+  }
+  // Last fallback: largest amount in the whole receipt
   let max = 0;
   for (const l of lines) {
-    const m = l.match(/(\d{1,4}[.,]\d{2})/);
+    const m = l.match(amtRe);
     if (m) { const v = parseFloat(m[1].replace(',', '.')); if (v > max) max = v; }
   }
   return max;
@@ -472,19 +492,21 @@ function extractTotal(lines) {
 
 function extractDate(lines) {
   const patterns = [
-    /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/,
-    /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2})\b/,
+    /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/,    // dd/mm/yyyy
+    /(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/,    // yyyy-mm-dd
+    /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2})\b/,  // dd/mm/yy
   ];
   for (const l of lines) {
-    for (const p of patterns) {
-      const m = l.match(p);
-      if (m) {
-        let y = parseInt(m[3]);
-        if (y < 100) y += 2000;
-        const d = new Date(y, parseInt(m[2]) - 1, parseInt(m[1]));
-        if (!isNaN(d.getTime()) && d.getFullYear() >= 2000 && d <= new Date()) {
-          return d.toISOString().split('T')[0];
-        }
+    for (let pi = 0; pi < patterns.length; pi++) {
+      const m = l.match(patterns[pi]);
+      if (!m) continue;
+      let day, month, year;
+      if (pi === 1) { year = +m[1]; month = +m[2]; day = +m[3]; }
+      else { day = +m[1]; month = +m[2]; year = +m[3]; }
+      if (year < 100) year += 2000;
+      const d = new Date(year, month - 1, day);
+      if (!isNaN(d.getTime()) && year >= 2000 && d <= new Date()) {
+        return d.toISOString().split('T')[0];
       }
     }
   }
@@ -493,26 +515,31 @@ function extractDate(lines) {
 
 function extractItems(lines) {
   const items = [];
-  const priceRe = /(\d{1,4}[.,]\d{2})\s*[€A]?\s*$/;
-  const skipRe  = /TOTALE|TOTAL|TOT\b|SUBTOT|SCONTO|IVA|CASSA|SCONTRINO|RICEVUTA|OPERATORE|GRAZIE|RESTO|CONTANTE|CARTA/i;
+  // Price at end of line — allow optional spaces/tabs, quantity prefix "2 x" pattern
+  const priceRe = /(\d{1,4}[.,]\d{2})\s*[€ABT]?\s*$/;
+  const skipRe  = /TOTALE|TOTAL|TOT\b|SUBTOT|SUB TOT|SCONTO|IVA\b|CASSA|SCONTRINO|RICEVUTA|OPERATORE|GRAZIE|RESTO|CONTANTE|CARTA|BANCOMAT|POS |CODICE|FISCALE|PAGAMENTO|IMPORTO|DOVUTO|NETTO|LORDO|ESERCENTE|PUNTO\s+VENDITA/i;
   for (const l of lines) {
     if (skipRe.test(l)) continue;
     const m = l.match(priceRe);
-    if (m) {
-      const price = parseFloat(m[1].replace(',', '.'));
-      if (price > 0 && price < 500) {
-        let name = l.replace(m[0], '').trim().replace(/\s{2,}/g, ' ');
-        // Strip leading item codes like "001 " or "A1 "
-        name = name.replace(/^[A-Z0-9]{1,5}\s+/, '').trim();
-        if (name.length > 1) items.push({ name, amount: price });
-      }
-    }
+    if (!m) continue;
+    const price = parseFloat(m[1].replace(',', '.'));
+    if (price <= 0 || price > 1000) continue;
+    let name = l.slice(0, l.lastIndexOf(m[0])).trim().replace(/\s{2,}/g, ' ');
+    // Strip leading item codes: "001", "A12", "0001"
+    name = name.replace(/^[A-Z0-9]{1,6}\s+/, '').trim();
+    // Strip quantity prefix: "2 X " or "3x "
+    name = name.replace(/^\d+\s*[xX]\s*/, '').trim();
+    if (name.length > 1 && name.length < 50) items.push({ name, amount: price });
   }
   return items.slice(0, 20);
 }
 
 function parseOCRText(text) {
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  // Normalise common OCR errors: l→1 in amounts, O→0 in amounts
+  const cleaned = text
+    .replace(/(\d)[lL](\d{2})\b/g, '$10$2')   // 5l50 → 5.50
+    .replace(/\bO(\d{2})\b/g, '0$1');           // O50 → 050
+  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
   return {
     storeName: extractStoreName(lines),
     total:     extractTotal(lines),
@@ -532,11 +559,52 @@ function fileToDataURL(file) {
   });
 }
 
+// ── IMAGE PREPROCESSING (greyscale + contrast + resize) ───────
+async function preprocessReceiptImage(file) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const MAX = 2000; // receipts are narrow — don't need huge resolution
+    let w = bitmap.width, h = bitmap.height;
+    if (w > MAX || h > MAX) {
+      const ratio = Math.min(MAX / w, MAX / h);
+      w = Math.round(w * ratio); h = Math.round(h * ratio);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, w, h);
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+
+    // Compute average brightness for adaptive threshold
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4)
+      sum += 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+    const avg = sum / (d.length / 4);
+    const threshold = Math.min(200, Math.max(100, avg * 1.05));
+
+    for (let i = 0; i < d.length; i += 4) {
+      // Greyscale
+      let g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+      // Strong contrast: push towards pure black/white
+      g = g < threshold ? Math.max(0, g - 40) : Math.min(255, g + 40);
+      d[i] = d[i+1] = d[i+2] = g;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    return canvas;
+  } catch (_) {
+    return file; // fall back to original if preprocessing fails
+  }
+}
+
 // ── OCR PIPELINE ─────────────────────────────────────────────
 async function runOCR(file) {
   const imgURL = await fileToDataURL(file);
   const html   = processingScreenHTML(0);
   openOverlay('oscanner', html);
+
+  const target = await preprocessReceiptImage(file);
 
   const worker = await Tesseract.createWorker(['ita', 'eng'], 1, {
     logger: m => {
@@ -560,7 +628,13 @@ async function runOCR(file) {
     },
   });
 
-  const { data: { text } } = await worker.recognize(file);
+  await worker.setParameters({
+    tessedit_pageseg_mode: '6',  // single uniform block — best for receipts
+    tessedit_ocr_engine_mode: '1', // LSTM neural net only
+    preserve_interword_spaces: '1',
+  });
+
+  const { data: { text } } = await worker.recognize(target);
   await worker.terminate();
 
   const parsed = parseOCRText(text);
