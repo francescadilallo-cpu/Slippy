@@ -1489,7 +1489,8 @@ function renderReceipts(q) {
     </div>`;
   } else {
     groupByDate(list).forEach(([grp, rows]) => {
-      bodyHTML += `<div class="sec"><div class="sec-hdr">${esc(grp)}</div><div class="sec-list">`;
+      const grpTotal = rows.reduce((s, r) => s + (r.totalAmount || 0), 0);
+      bodyHTML += `<div class="sec"><div class="sec-hdr"><span>${esc(grp)}</span><span class="sec-total">${fmt(grpTotal)}</span></div><div class="sec-list">`;
       rows.forEach(r => {
         const cat   = catById(r.category);
         const freq  = storeFreq[r.storeName || 'Negozio'] || 0;
