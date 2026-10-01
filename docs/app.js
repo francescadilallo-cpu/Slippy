@@ -1181,9 +1181,9 @@ function renderBudgetSection(spent, budget) {
   <div class="card budget-wrap">
     <svg class="budget-ring" viewBox="0 0 100 100">
       <circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--fill2)" stroke-width="9"/>
-      <circle cx="50" cy="50" r="${r}" fill="none" stroke="${ringColor}" stroke-width="9"
-        stroke-dasharray="${dash} ${circ}" stroke-dashoffset="${offset}"
-        stroke-linecap="round"/>
+      <circle class="budget-fill" cx="50" cy="50" r="${r}" fill="none" stroke="${ringColor}" stroke-width="9"
+        stroke-dasharray="0 ${circ}" stroke-dashoffset="${offset}"
+        stroke-linecap="round" data-dash="${dash}" data-circ="${circ}"/>
       <text x="50" y="46" text-anchor="middle" dominant-baseline="middle"
         font-size="18" font-weight="800" style="fill:var(--lbl)">${pctRound}%</text>
       <text x="50" y="62" text-anchor="middle" font-size="9" style="fill:var(--lbl2)">budget</text>
@@ -1361,7 +1361,8 @@ function renderDashboard() {
       <span class="ai-badge">Claude</span>
     </div>
     ${cachedAnalysis?.text
-      ? `<p class="ai-tip">${esc(cachedAnalysis.text)}</p>`
+      ? `<p class="ai-tip">${esc(cachedAnalysis.text)}</p>
+         <button class="ai-regen-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">↺ Rigenera</button>`
       : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Analisi intelligente delle spese di ${monthLabel(mo)}.</p>
          <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">Analizza questo mese →</button>`}
   </div>` : '';
@@ -1429,6 +1430,17 @@ function renderDashboard() {
 
   // Count-up animation on the main spend amount
   animateCount(el.querySelector('.s-amt'), total);
+
+  // Budget ring fill animation
+  const fill = el.querySelector('.budget-fill');
+  if (fill) {
+    const dash = parseFloat(fill.dataset.dash);
+    const circ = parseFloat(fill.dataset.circ);
+    requestAnimationFrame(() => {
+      fill.style.transition = 'stroke-dasharray .9s cubic-bezier(.4,0,.2,1)';
+      fill.style.strokeDasharray = `${dash} ${circ}`;
+    });
+  }
 }
 
 function shiftMonth(dir) {
