@@ -1,4 +1,4 @@
-const CACHE = 'slippy-v26';
+const CACHE = 'slippy-v27';
 const CORE  = ['./', './index.html', './app.js', './manifest.json'];
 
 self.addEventListener('install', e => {

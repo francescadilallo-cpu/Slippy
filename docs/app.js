@@ -1055,6 +1055,8 @@ function showEditForm(id) {
     <div class="pad"></div>
     <button class="btn btn-p" onclick="saveReceiptEdit('${id}')">Salva Modifiche</button>
     <div style="height:10px"></div>
+    <button class="btn btn-s" onclick="duplicateReceipt('${id}')">Duplica Scontrino</button>
+    <div style="height:10px"></div>
     <button class="btn btn-d" onclick="confirmDelete('${id}')">Elimina Scontrino</button>
     <div class="pad"></div>
   </div>`;
@@ -1079,6 +1081,22 @@ function saveReceiptEdit(id) {
   openDetail(id);
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
+}
+
+function duplicateReceipt(id) {
+  const r = state.receipts.find(x => x.id === id);
+  if (!r) return;
+  const copy = { ...r, id: uid(), date: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() };
+  delete copy.imageDataURL;
+  delete copy.rawText;
+  state.receipts.unshift(copy);
+  persist();
+  haptic('medium');
+  closeOverlay('odetail');
+  toast('Scontrino duplicato — aggiorna data e importo se necessario');
+  renderDashboard();
+  if (state.tab === 'r') renderReceipts();
+  setTimeout(() => openDetail(copy.id), 400);
 }
 
 // ── MONTHLY TOTALS FOR SPARKLINE ──────────────────────────────
@@ -1353,9 +1371,9 @@ function renderDashboard() {
 
   const chartSection = catRows.length > 0 ? `
   <div class="card chart-card">
-    <div class="chart-title">Per Categoria</div>
+    <div class="chart-title">Per Categoria <span style="font-size:9px;opacity:.5;font-weight:400;text-transform:none">· tocca per filtrare</span></div>
     ${catRows.map(({ cat, amt }, i) => `
-    <div class="brow">
+    <div class="brow" onclick="gotoTab('r');setFilter('${cat.id}')" style="cursor:pointer">
       <span class="bico">${cat.icon}</span>
       <span class="bnm">${cat.name}</span>
       <div class="btrk"><div class="bfll" style="width:${(amt / maxAmt * 100).toFixed(1)}%;background:${cat.color};animation-delay:${i * 65}ms"></div></div>
