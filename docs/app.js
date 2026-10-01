@@ -587,6 +587,22 @@ function updateProcSteps(pct) {
   if (steps[2]) steps[2].classList.toggle('done', pct >= 100);
 }
 
+// ── ITEM ROW HELPER ───────────────────────────────────────────
+function addItemRow() {
+  const container = document.getElementById('items-rows');
+  if (!container) return;
+  let i = 0;
+  while (document.getElementById('itn' + i)) i++;
+  const row = document.createElement('div');
+  row.className = 'frow';
+  row.style.gap = '8px';
+  row.innerHTML = `
+    <input class="finp" style="text-align:left;flex:1" placeholder="Nome prodotto" id="itn${i}" autofocus/>
+    <input class="finp" style="width:72px;text-align:right" type="number" step="0.01" placeholder="0.00" id="ita${i}" inputmode="decimal"/>`;
+  container.appendChild(row);
+  row.querySelector('input').focus();
+}
+
 // ── RENDER: OCR PREVIEW FORM ──────────────────────────────────
 function renderOCRPreview(parsed, imgURL) {
   const overlay = document.getElementById('oscanner');
@@ -636,11 +652,13 @@ function renderOCRPreview(parsed, imgURL) {
         <select class="finp" id="fc">${catsOpt}</select>
       </div>
     </div>
-    ${parsed.items.length > 0 ? `
-    <div class="fsec">
-      <div class="fhdr">Prodotti rilevati</div>
-      ${itemsRows}
-    </div>` : ''}
+    <div class="fsec" id="items-fsec">
+      <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Prodotti</span>
+        <button type="button" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:0" onclick="addItemRow()">+ Aggiungi</button>
+      </div>
+      <div id="items-rows">${itemsRows}</div>
+    </div>
     <div class="fsec">
       <div class="fhdr">Note (opzionale)</div>
       <div class="frow" style="border-radius:var(--r)">
@@ -755,6 +773,13 @@ function openManualEntry() {
         <select class="finp" id="mc">${catsOpt}</select>
       </div>
     </div>
+    <div class="fsec" id="items-fsec">
+      <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Prodotti (opzionale)</span>
+        <button type="button" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:0" onclick="addItemRow()">+ Aggiungi</button>
+      </div>
+      <div id="items-rows"></div>
+    </div>
     <div class="fsec">
       <div class="fhdr">Note (opzionale)</div>
       <div class="frow" style="border-radius:var(--r)">
@@ -787,10 +812,18 @@ function saveManualEntry() {
 }
 
 function _doSaveManual(name, total, date, catId, note) {
+  const items = [];
+  let i = 0;
+  while (document.getElementById('itn' + i)) {
+    const n = (document.getElementById('itn' + i).value || '').trim();
+    const a = parseFloat(document.getElementById('ita' + i).value || '0') || 0;
+    if (n) items.push({ name: n, amount: a });
+    i++;
+  }
   const receipt = {
     id: uid(), storeName: name, totalAmount: total,
     date, createdAt: new Date().toISOString(),
-    category: catId, items: [], rawText: '', imageDataURL: null,
+    category: catId, items, rawText: '', imageDataURL: null,
     note: note || undefined,
   };
   state.receipts.unshift(receipt);
