@@ -175,6 +175,42 @@ async function shareReceipt(id) {
   }
 }
 
+// ── SHARE MONTH SUMMARY ───────────────────────────────────────
+async function shareMonthSummary(moKey) {
+  const [year, month] = moKey.split('-').map(Number);
+  const mo = new Date(year, month, 1);
+  const rx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), mo));
+  if (!rx.length) return;
+  const total = rx.reduce((s, r) => s + (r.totalAmount || 0), 0);
+  const catTotals = {};
+  rx.forEach(r => { catTotals[r.category] = (catTotals[r.category] || 0) + (r.totalAmount || 0); });
+  const topCats = Object.entries(catTotals)
+    .sort((a, b) => b[1] - a[1]).slice(0, 3)
+    .map(([id, amt]) => { const c = catById(id); return `${c.icon} ${c.name}: ${fmt(amt)}`; });
+
+  const text = [
+    `📊 Riepilogo ${monthLabel(mo)}`,
+    ``,
+    `Spesa totale: ${fmt(total)}`,
+    `Scontrini: ${rx.length}`,
+    `Media: ${fmt(total / rx.length)}`,
+    ``,
+    `Per categoria:`,
+    ...topCats,
+    ``,
+    `— Slippy`,
+  ].join('\n');
+
+  haptic('light');
+  if (navigator.share) {
+    try { await navigator.share({ title: `Spese ${monthLabel(mo)}`, text }); }
+    catch(e) { if (e.name !== 'AbortError') toast('Impossibile condividere'); }
+  } else {
+    try { await navigator.clipboard.writeText(text); toast('Riepilogo copiato!'); }
+    catch(e) { toast('Condivisione non supportata'); }
+  }
+}
+
 // ── FORECAST ─────────────────────────────────────────────────
 function renderForecastSection(thisRx, mo) {
   const now = new Date();
@@ -1413,6 +1449,10 @@ function renderDashboard() {
       <div class="sp"><div class="sp-v">${fmt(avg)}</div><div class="sp-l">Media</div></div>
       <div class="sp"><div class="sp-v">${catRows.length}</div><div class="sp-l">Categorie</div></div>
     </div>
+    ${thisRx.length > 0 ? `<button class="spend-share-btn" onclick="shareMonthSummary('${mo.getFullYear()}-${mo.getMonth()}')">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      Condividi riepilogo
+    </button>` : ''}
   </div>
   ${forecastSection}
   ${weekSection}
