@@ -1734,6 +1734,12 @@ function renderSettings() {
       <span class="slbl" style="${!count ? 'color:var(--lbl3)' : ''}">Esporta CSV</span>
       <span class="sval">${count} scontrin${count === 1 ? 'o' : 'i'}</span>
     </div>
+    <div class="srow si-row" style="cursor:pointer" onclick="importCSV()">
+      <div class="si-ico" style="background:#34C75922">📥</div>
+      <span class="slbl">Importa CSV</span>
+      <span class="sval">Ripristina</span>
+    </div>
+    <input type="file" id="csv-import-inp" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(this)"/>
     <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'clearAllData()' : ''}">
       <div class="si-ico" style="background:#FF3B3022">🗑️</div>
       <span class="slbl" style="${!count ? 'color:var(--lbl3)' : 'color:var(--red)'}">Cancella tutti i dati</span>
@@ -1822,6 +1828,72 @@ function exportCSV() {
   URL.revokeObjectURL(url);
   toast('CSV esportato!');
 }
+
+function importCSV() {
+  const inp = document.getElementById('csv-import-inp');
+  if (inp) inp.click();
+}
+
+function handleCSVImport(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) { toast('File CSV vuoto o non valido.'); return; }
+      // Parse header to determine column positions
+      const header = parseCSVRow(lines[0]).map(h => h.toLowerCase());
+      const idIdx    = header.indexOf('id');
+      const storeIdx = header.indexOf('store');
+      const totalIdx = header.findIndex(h => h.includes('total'));
+      const dateIdx  = header.indexOf('date');
+      const catIdx   = header.indexOf('category');
+      if (storeIdx < 0 || totalIdx < 0) { toast('Formato CSV non riconosciuto.'); return; }
+
+      const existing = new Set(state.receipts.map(r => r.id));
+      let added = 0;
+      lines.slice(1).forEach(line => {
+        const cols  = parseCSVRow(line);
+        const id    = idIdx >= 0 ? (cols[idIdx] || uid()) : uid();
+        const store = cols[storeIdx] || 'Negozio';
+        const total = parseFloat(cols[totalIdx] || '0') || 0;
+        const date  = dateIdx >= 0 ? cols[dateIdx] : new Date().toISOString().split('T')[0];
+        if (existing.has(id)) return;
+        existing.add(id);
+        state.receipts.push({ id, storeName: store, totalAmount: total, date,
+          category: 'other', items: [], createdAt: date });
+        added++;
+      });
+
+      if (added > 0) {
+        persist();
+        renderDashboard();
+        renderReceipts();
+        renderSettings();
+        toast(`${added} scontrin${added===1?'o':'i'} importat${added===1?'o':'i'}!`);
+      } else {
+        toast('Nessun nuovo scontrino trovato.');
+      }
+    } catch(_) { toast('Errore durante l\'importazione.'); }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVRow(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === ',' && !inQ) { cols.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  cols.push(cur);
+  return cols;
+}
+
 function clearAllData() {
   haptic('medium');
   confirmSheet(`Eliminare tutti i ${state.receipts.length} scontrini? Non sarà possibile annullare.`, 'Elimina tutto', () => {
