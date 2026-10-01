@@ -88,10 +88,10 @@ function groupByDate(receipts) {
   receipts.forEach(r => {
     const d = new Date(r.date || r.createdAt);
     let g;
-    if      (d.toDateString() === todayStr)     g = 'Today';
-    else if (d.toDateString() === yesterdayStr) g = 'Yesterday';
-    else if (now - d < 7 * 86400000)            g = 'This Week';
-    else if (sameMonth(d, now))                 g = 'This Month';
+    if      (d.toDateString() === todayStr)     g = 'Oggi';
+    else if (d.toDateString() === yesterdayStr) g = 'Ieri';
+    else if (now - d < 7 * 86400000)            g = 'Questa Settimana';
+    else if (sameMonth(d, now))                 g = 'Questo Mese';
     else {
       g = d.toLocaleDateString('it-IT', { month:'long', year:'numeric' });
       g = g[0].toUpperCase() + g.slice(1);
@@ -1010,29 +1010,33 @@ function calcInsights(thisRx, prevRx, mo) {
 // ── RENDER: BUDGET SECTION ────────────────────────────────────
 function renderBudgetSection(spent, budget) {
   if (!budget || budget <= 0) return '';
-  const pct = Math.min(100, Math.round(spent / budget * 100));
-  const remaining = budget - spent;
+  const pct      = Math.min(100, spent / budget * 100);
+  const pctRound = Math.round(pct);
+  const remaining  = budget - spent;
   const overBudget = spent > budget;
-  const barColor = pct < 70 ? 'var(--green)' : pct < 90 ? 'var(--orange)' : 'var(--red)';
+  const ringColor  = pct < 70 ? 'var(--green)' : pct < 90 ? 'var(--orange)' : 'var(--red)';
+  const r = 40, circ = +(2 * Math.PI * r).toFixed(2);
+  const dash = (Math.min(pct, 100) / 100 * circ).toFixed(2);
+  const offset = (circ / 4).toFixed(2);
   const remainText = overBudget
-    ? `<span style="color:var(--red);font-weight:700">Over budget</span>`
+    ? `<span style="color:var(--red);font-weight:700">Sopra budget</span>`
     : `${fmt(remaining)} rimanenti`;
 
   return `
   <div class="card budget-wrap">
-    <div class="budget-top">
-      <div>
-        <div class="budget-lbl">Budget Mensile</div>
-        <div class="budget-remain">${remainText}</div>
-      </div>
-      <div class="budget-pct" style="color:${barColor}">${pct}%</div>
-    </div>
-    <div class="budget-track">
-      <div class="budget-fill" style="width:${pct}%;background:${barColor}"></div>
-    </div>
-    <div class="budget-sub">
-      <span>${fmt(spent)} spesi</span>
-      <span>su ${fmt(budget)}</span>
+    <svg class="budget-ring" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--fill2)" stroke-width="9"/>
+      <circle cx="50" cy="50" r="${r}" fill="none" stroke="${ringColor}" stroke-width="9"
+        stroke-dasharray="${dash} ${circ}" stroke-dashoffset="${offset}"
+        stroke-linecap="round"/>
+      <text x="50" y="46" text-anchor="middle" dominant-baseline="middle"
+        font-size="18" font-weight="800" style="fill:var(--lbl)">${pctRound}%</text>
+      <text x="50" y="62" text-anchor="middle" font-size="9" style="fill:var(--lbl2)">budget</text>
+    </svg>
+    <div class="budget-info">
+      <div class="budget-lbl">Budget Mensile</div>
+      <div class="budget-remain">${remainText}</div>
+      <div class="budget-meta">${fmt(spent)} di ${fmt(budget)}</div>
     </div>
   </div>`;
 }
@@ -1047,7 +1051,7 @@ function renderInsightsSection(insights) {
     </div>`).join('');
   return `
   <div class="card insight-wrap">
-    <div class="insight-hdr">Smart Insights</div>
+    <div class="insight-hdr">Tendenze</div>
     ${rows}
   </div>`;
 }
