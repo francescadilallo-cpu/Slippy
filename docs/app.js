@@ -32,6 +32,7 @@ const state = {
   detailId: null,
   searchQ: '',
   filterCat: null,
+  sortOrder: 'date_desc',
   aiTips: {},
   monthlyAnalysis: {},
 };
@@ -909,6 +910,11 @@ function setFilter(cat) {
   renderReceipts();
 }
 
+function setSort(order) {
+  state.sortOrder = order;
+  renderReceipts();
+}
+
 // ── WEEK SUMMARY ──────────────────────────────────────────────
 function renderWeekSection(allRx) {
   const now = new Date();
@@ -1439,9 +1445,12 @@ function renderReceipts(q) {
   const el    = document.getElementById('vr');
   const query = (state.searchQ || '').toLowerCase().trim();
 
-  let list = [...state.receipts].sort((a, b) =>
-    new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt)
-  );
+  let list = [...state.receipts].sort((a, b) => {
+    if (state.sortOrder === 'amt_desc') return (b.totalAmount || 0) - (a.totalAmount || 0);
+    if (state.sortOrder === 'amt_asc') return (a.totalAmount || 0) - (b.totalAmount || 0);
+    if (state.sortOrder === 'date_asc') return new Date(a.date || a.createdAt) - new Date(b.date || b.createdAt);
+    return new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt);
+  });
   if (query) {
     list = list.filter(r =>
       (r.storeName || '').toLowerCase().includes(query) ||
@@ -1460,18 +1469,25 @@ function renderReceipts(q) {
     storeFreq[s] = (storeFreq[s] || 0) + 1;
   });
 
-  // Category filter chips
+  // Category filter chips with counts
   const usedCats = [...new Set(state.receipts.map(r => r.category))];
+  const catCounts = {};
+  state.receipts.forEach(r => { catCounts[r.category] = (catCounts[r.category] || 0) + 1; });
+  const sortLabel = { date_desc: '↓ Data', date_asc: '↑ Data', amt_desc: '↓ €', amt_asc: '↑ €' };
+  const nextSort  = { date_desc: 'amt_desc', amt_desc: 'amt_asc', amt_asc: 'date_asc', date_asc: 'date_desc' };
   const filterBar = `
-  <div class="filter-wrap">
-    <button class="fchip ${!state.filterCat ? 'on' : ''}" onclick="setFilter(null)">Tutti</button>
-    ${usedCats.map(cid => {
-      const c = catById(cid);
-      const active = state.filterCat === cid;
-      return `<button class="fchip ${active ? 'on' : ''}"
-        style="${active ? `background:${c.color};border-color:${c.color}` : ''}"
-        onclick="setFilter('${cid}')">${c.icon} ${c.name}</button>`;
-    }).join('')}
+  <div class="filter-bar-row">
+    <div class="filter-wrap">
+      <button class="fchip ${!state.filterCat ? 'on' : ''}" onclick="setFilter(null)">Tutti <span class="chip-cnt">${state.receipts.length}</span></button>
+      ${usedCats.map(cid => {
+        const c = catById(cid);
+        const active = state.filterCat === cid;
+        return `<button class="fchip ${active ? 'on' : ''}"
+          style="${active ? `background:${c.color};border-color:${c.color}` : ''}"
+          onclick="setFilter('${cid}')">${c.icon} ${c.name} <span class="chip-cnt">${catCounts[cid] || 0}</span></button>`;
+      }).join('')}
+    </div>
+    <button class="sort-btn" onclick="setSort('${nextSort[state.sortOrder] || 'date_desc'}')">${sortLabel[state.sortOrder] || '↓ Data'}</button>
   </div>`;
 
   const isFiltered = query || state.filterCat;
