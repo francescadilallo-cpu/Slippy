@@ -117,6 +117,40 @@ function animateCount(el, target) {
   requestAnimationFrame(step);
 }
 
+// ── TOP STORES ───────────────────────────────────────────────
+function renderTopStoresSection(thisRx) {
+  if (thisRx.length < 3) return '';
+  const storeMap = {};
+  thisRx.forEach(r => {
+    const s = r.storeName || 'Store';
+    if (!storeMap[s]) storeMap[s] = { count: 0, total: 0, cat: r.category };
+    storeMap[s].count++;
+    storeMap[s].total += r.totalAmount || 0;
+  });
+  const sorted = Object.entries(storeMap)
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, 4);
+  if (sorted.length < 2) return '';
+  const medals = ['🥇','🥈','🥉',''];
+  return `
+  <div class="card top-stores-card">
+    <div class="ts-title">Top Negozi del Mese</div>
+    ${sorted.map(([name, data], i) => {
+      const cat = catById(data.cat);
+      return `
+      <div class="ts-row">
+        <span class="ts-medal">${medals[i]}</span>
+        <span class="ts-ico">${cat.icon}</span>
+        <div class="ts-info">
+          <div class="ts-name">${esc(name)}</div>
+          <div class="ts-meta">${data.count} ${data.count === 1 ? 'visita' : 'visite'}</div>
+        </div>
+        <div class="ts-amt">${fmt(data.total)}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 // ── SHARE RECEIPT ────────────────────────────────────────────
 async function shareReceipt(id) {
   const r = state.receipts.find(x => x.id === id);
@@ -1067,20 +1101,29 @@ function renderDashboard() {
   const chartSection = catRows.length > 0 ? `
   <div class="card chart-card">
     <div class="chart-title">Per Categoria</div>
-    ${catRows.map(({ cat, amt }) => `
+    ${catRows.map(({ cat, amt }, i) => `
     <div class="brow">
       <span class="bico">${cat.icon}</span>
       <span class="bnm">${cat.name}</span>
-      <div class="btrk"><div class="bfll" style="width:${(amt / maxAmt * 100).toFixed(1)}%;background:${cat.color}"></div></div>
+      <div class="btrk"><div class="bfll" style="width:${(amt / maxAmt * 100).toFixed(1)}%;background:${cat.color};animation-delay:${i * 65}ms"></div></div>
       <span class="bval">${fmt(amt)}</span>
     </div>`).join('')}
   </div>` : '';
 
   const emptyState = state.receipts.length === 0 ? `
-  <div class="empty" style="margin-top:20px">
-    <div class="empty-ico">🧾</div>
-    <h3>Nessuno scontrino</h3>
-    <p>Tocca <strong>＋</strong> per aggiungere il primo scontrino e iniziare a tracciare le spese.</p>
+  <div class="welcome-wrap">
+    <div class="welcome-hero">
+      <div class="welcome-ico-wrap"><span class="welcome-ico">S</span></div>
+      <h2 class="welcome-title">Benvenuto su Slippy</h2>
+      <p class="welcome-sub">Il modo più intelligente di tracciare le spese quotidiane.</p>
+    </div>
+    <div class="card welcome-steps">
+      <div class="ws-row"><span class="ws-num">1</span><div><strong>Fotografa</strong> uno scontrino con la fotocamera</div></div>
+      <div class="ws-row"><span class="ws-num">2</span><div><strong>Slippy legge</strong> importo e negozio automaticamente</div></div>
+      <div class="ws-row"><span class="ws-num">3</span><div><strong>Analizza</strong> le spese mensili con AI integrata</div></div>
+    </div>
+    <button class="welcome-cta" onclick="document.getElementById('fab').click()">Aggiungi il primo scontrino →</button>
+    ${!state.settings.apiKey ? `<p class="welcome-hint">💡 Aggiungi una chiave API Claude nelle Impostazioni per sbloccare l'analisi AI.</p>` : ''}
   </div>` : '';
 
   const weekSection    = renderWeekSection(state.receipts);
@@ -1106,7 +1149,8 @@ function renderDashboard() {
          <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">Analizza questo mese →</button>`}
   </div>` : '';
 
-  const forecastSection = renderForecastSection(thisRx, mo);
+  const forecastSection   = renderForecastSection(thisRx, mo);
+  const topStoresSection  = renderTopStoresSection(thisRx);
 
   el.innerHTML = `
   <div class="nav brand-nav">
@@ -1137,6 +1181,7 @@ function renderDashboard() {
   ${insightSection}
   ${sparkSection}
   ${chartSection}
+  ${topStoresSection}
   ${aiMonthCard}
   ${emptyState}
   <div class="pad"></div>`;
