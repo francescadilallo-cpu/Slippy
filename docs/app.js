@@ -1749,12 +1749,12 @@ async function fetchTip(receiptId) {
   }
 
   if (tipEl) tipEl.innerHTML = `
-    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
+    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Consiglio AI</h3><span class="ai-badge">Claude</span></div>
     <div class="spin" style="width:26px;height:26px;margin:10px auto;border-width:3px"></div>`;
 
   try {
     const cat    = catById(r.category);
-    const prompt = `I spent ${fmt(r.totalAmount || 0)} at "${r.storeName || 'a store'}" (${cat.name}). Give me 1 practical, actionable saving tip in 2 sentences max. Be specific and friendly.`;
+    const prompt = `Sei un consulente finanziario. Ho speso ${fmt(r.totalAmount || 0)} da "${r.storeName || 'un negozio'}" (categoria: ${cat.name}). Dammi 1 consiglio pratico in italiano in massimo 2 frasi. Sii specifico e amichevole.`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1777,16 +1777,16 @@ async function fetchTip(receiptId) {
     }
 
     const data = await res.json();
-    const tip  = data.content?.[0]?.text?.trim() || 'No tip available.';
+    const tip  = data.content?.[0]?.text?.trim() || 'Nessun consiglio disponibile.';
     state.aiTips[receiptId] = tip;
 
     if (tipEl) tipEl.innerHTML = `
-      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Consiglio AI</h3><span class="ai-badge">Claude</span></div>
       <p class="ai-tip">${esc(tip)}</p>`;
   } catch (err) {
-    const msg = err.message || 'Failed to fetch tip';
+    const msg = err.message || 'Errore nel recupero del consiglio';
     if (tipEl) tipEl.innerHTML = `
-      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>AI Saving Tip</h3><span class="ai-badge">Claude</span></div>
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Consiglio AI</h3><span class="ai-badge">Claude</span></div>
       <p style="font-size:13px;color:var(--red);margin-bottom:8px">${esc(msg)}</p>
       <button class="ai-btn" onclick="fetchTip('${receiptId}')">Riprova</button>`;
   }
