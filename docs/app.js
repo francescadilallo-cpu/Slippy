@@ -122,7 +122,7 @@ function renderTopStoresSection(thisRx) {
   if (thisRx.length < 3) return '';
   const storeMap = {};
   thisRx.forEach(r => {
-    const s = r.storeName || 'Store';
+    const s = r.storeName || 'Negozio';
     if (!storeMap[s]) storeMap[s] = { count: 0, total: 0, cat: r.category };
     storeMap[s].count++;
     storeMap[s].total += r.totalAmount || 0;
@@ -157,7 +157,7 @@ async function shareReceipt(id) {
   if (!r) return;
   const cat = catById(r.category);
   const text = [
-    `${cat.icon} ${r.storeName || 'Store'}`,
+    `${cat.icon} ${r.storeName || 'Negozio'}`,
     `${fmtDate(r.date || r.createdAt)} · ${cat.name}`,
     `Totale: ${fmt(r.totalAmount || 0)}`,
     r.note ? `📝 ${r.note}` : '',
@@ -360,7 +360,7 @@ function extractStoreName(lines) {
       return t;
     }
   }
-  return 'Store';
+  return 'Negozio';
 }
 
 function extractTotal(lines) {
@@ -447,13 +447,23 @@ async function runOCR(file) {
 
   const worker = await Tesseract.createWorker(['ita', 'eng'], 1, {
     logger: m => {
+      const staticPct = {
+        'loading tesseract core': 5,
+        'loading language traineddata': 12,
+        'initializing api': 22,
+        'initialized api': 30,
+      };
+      let pct;
       if (m.status === 'recognizing text') {
-        const pct = Math.round((m.progress || 0) * 100);
-        const pe = document.querySelector('.prog-pct');
-        const pb = document.querySelector('.prog-bar');
-        if (pe) pe.textContent = pct + '%';
-        if (pb) pb.style.width  = pct + '%';
-      }
+        pct = Math.round(30 + (m.progress || 0) * 68);
+      } else if (staticPct[m.status] !== undefined) {
+        pct = staticPct[m.status];
+      } else return;
+      const pe = document.querySelector('.prog-pct');
+      const pb = document.querySelector('.prog-bar');
+      if (pe) pe.textContent = pct + '%';
+      if (pb) pb.style.width  = pct + '%';
+      updateProcSteps(pct);
     },
   });
 
@@ -473,13 +483,37 @@ function processingScreenHTML(pct) {
     <h2>Scansione</h2><div style="min-width:56px"></div>
   </div>
   <div class="processing">
-    <div class="spin"></div>
-    <p style="font-size:16px;font-weight:600;color:var(--lbl)">Lettura scontrino…</p>
-    <div style="width:100%;max-width:260px;height:4px;background:var(--fill2);border-radius:2px;overflow:hidden;margin-top:2px">
-      <div class="prog-bar" style="height:100%;background:var(--accent);border-radius:2px;transition:width .3s;width:${pct}%"></div>
+    <div class="proc-ring">
+      <span class="proc-ico">🧾</span>
     </div>
-    <span class="prog-pct" style="font-size:13px;color:var(--lbl2)">${pct}%</span>
+    <div style="width:100%;max-width:280px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:14px;font-weight:600;color:var(--lbl)">Lettura scontrino</span>
+        <span class="prog-pct" style="font-size:14px;font-weight:700;color:var(--accent)">${pct}%</span>
+      </div>
+      <div style="width:100%;height:6px;background:var(--fill2);border-radius:3px;overflow:hidden">
+        <div class="prog-bar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-end));border-radius:3px;transition:width .3s;width:${pct}%"></div>
+      </div>
+    </div>
+    <div class="proc-steps">
+      <div class="proc-step ${pct > 15 ? 'done' : ''}">
+        <div class="proc-dot"></div><span>Caricamento immagine</span>
+      </div>
+      <div class="proc-step ${pct > 50 ? 'done' : ''}">
+        <div class="proc-dot"></div><span>Riconoscimento testo</span>
+      </div>
+      <div class="proc-step ${pct >= 100 ? 'done' : ''}">
+        <div class="proc-dot"></div><span>Estrazione dati</span>
+      </div>
+    </div>
   </div>`;
+}
+
+function updateProcSteps(pct) {
+  const steps = document.querySelectorAll('.proc-step');
+  if (steps[0]) steps[0].classList.toggle('done', pct > 15);
+  if (steps[1]) steps[1].classList.toggle('done', pct > 50);
+  if (steps[2]) steps[2].classList.toggle('done', pct >= 100);
 }
 
 // ── RENDER: OCR PREVIEW FORM ──────────────────────────────────
@@ -492,7 +526,7 @@ function renderOCRPreview(parsed, imgURL) {
 
   const itemsRows = parsed.items.map((it, i) => `
     <div class="frow" style="gap:8px">
-      <input class="finp" style="text-align:left;flex:1" placeholder="Item name"
+      <input class="finp" style="text-align:left;flex:1" placeholder="Nome prodotto"
              value="${esc(it.name)}" id="itn${i}"/>
       <input class="finp" style="width:72px;text-align:right" type="number" step="0.01"
              value="${it.amount.toFixed(2)}" id="ita${i}"/>
@@ -556,7 +590,7 @@ function isDuplicate(name, total) {
 }
 
 function saveReceiptFromForm() {
-  const name  = (document.getElementById('fn')?.value || '').trim() || 'Store';
+  const name  = (document.getElementById('fn')?.value || '').trim() || 'Negozio';
   const total = parseFloat(document.getElementById('ft')?.value || '0') || 0;
   const date  = document.getElementById('fd')?.value || new Date().toISOString().split('T')[0];
   const catId = document.getElementById('fc')?.value || 'other';
@@ -649,7 +683,7 @@ function openManualEntry() {
 }
 
 function saveManualEntry() {
-  const name  = (document.getElementById('mn')?.value || '').trim() || 'Store';
+  const name  = (document.getElementById('mn')?.value || '').trim() || 'Negozio';
   const total = parseFloat(document.getElementById('mt')?.value || '0') || 0;
   const date  = document.getElementById('md')?.value || new Date().toISOString().split('T')[0];
   const catId = document.getElementById('mc')?.value || 'other';
@@ -1057,7 +1091,7 @@ function calcInsights(thisRx, prevRx, mo) {
   // 4. Negozio più visitato
   if (thisRx.length >= 2) {
     const storeCounts = {};
-    thisRx.forEach(r => { const s = r.storeName || 'Store'; storeCounts[s] = (storeCounts[s] || 0) + 1; });
+    thisRx.forEach(r => { const s = r.storeName || 'Negozio'; storeCounts[s] = (storeCounts[s] || 0) + 1; });
     const topStore = Object.entries(storeCounts).sort((a, b) => b[1] - a[1])[0];
     if (topStore && topStore[1] >= 2) {
       insights.push({ color: 'var(--purple)', text: `${topStore[0]}: ${topStore[1]} visite questo mese` });
@@ -1285,7 +1319,7 @@ function renderReceipts(q) {
   // Build store frequency map for recurring badge
   const storeFreq = {};
   state.receipts.forEach(r => {
-    const s = r.storeName || 'Store';
+    const s = r.storeName || 'Negozio';
     storeFreq[s] = (storeFreq[s] || 0) + 1;
   });
 
@@ -1320,7 +1354,7 @@ function renderReceipts(q) {
       bodyHTML += `<div class="sec"><div class="sec-hdr">${esc(grp)}</div><div class="sec-list">`;
       rows.forEach(r => {
         const cat   = catById(r.category);
-        const freq  = storeFreq[r.storeName || 'Store'] || 0;
+        const freq  = storeFreq[r.storeName || 'Negozio'] || 0;
         const badge = freq >= 3 ? `<span class="freq-badge">×${freq}</span>` : '';
         bodyHTML += `
         <div class="rx-wrap">
@@ -1330,7 +1364,7 @@ function renderReceipts(q) {
               ? `<img src="${r.imageDataURL}" class="rx-thumb"/>`
               : `<div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>`}
             <div class="ri">
-              <div class="rn">${esc(r.storeName || 'Store')}${badge}</div>
+              <div class="rn">${esc(r.storeName || 'Negozio')}${badge}</div>
               <div class="rs">${r.imageDataURL ? `${cat.icon} ` : ''}${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}${r.note ? `<span class="note-pip"> · 📝</span>` : ''}</div>
             </div>
             <div class="ra" style="color:${cat.color}">${fmt(r.totalAmount || 0)}</div>
@@ -1425,7 +1459,7 @@ function buildDetailHTML(id) {
       <div class="det-hero-top">
         <div class="det-hero-ico">${cat.icon}</div>
         <div>
-          <div class="det-hero-store">${esc(r.storeName || 'Store')}</div>
+          <div class="det-hero-store">${esc(r.storeName || 'Negozio')}</div>
           <div class="det-hero-cat">${esc(cat.name)}</div>
         </div>
       </div>
