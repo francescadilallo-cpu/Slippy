@@ -182,15 +182,19 @@ function renderForecastSection(thisRx, mo) {
   if (daysLeft <= 1) return '';
   const total = thisRx.reduce((s, r) => s + (r.totalAmount||0), 0);
   const projected = Math.round((total / day) * daysInMonth);
+  const dailyRate = total / day;
   const budget = state.settings.budget || 0;
   const overBudget = budget > 0 && projected > budget;
   const color = overBudget ? 'var(--red)' : 'var(--accent)';
   return `
   <div class="card forecast-card">
     <div class="forecast-lbl">Proiezione Fine Mese</div>
-    <div class="forecast-amt" style="color:${color}">${fmt(projected)}</div>
+    <div class="forecast-main">
+      <div class="forecast-amt" style="color:${color}">${fmt(projected)}</div>
+      <div class="forecast-rate">${fmt(dailyRate)}<span>/giorno</span></div>
+    </div>
     <div class="forecast-sub">
-      ${fmt(Math.round((total / day) * daysLeft))} nei prossimi ${daysLeft} giorni
+      ${fmt(Math.round(dailyRate * daysLeft))} nei prossimi ${daysLeft} giorni
       ${overBudget ? `<span style="color:var(--red);font-weight:600"> · sopra budget</span>` : ''}
     </div>
   </div>`;
@@ -1398,8 +1402,9 @@ function renderReceipts(q) {
   </div>`;
 
   const isFiltered = query || state.filterCat;
+  const filteredTotal = list.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const countLine = isFiltered && list.length > 0
-    ? `<div class="result-count">${list.length} risultat${list.length===1?'o':'i'}</div>`
+    ? `<div class="result-count">${list.length} risultat${list.length===1?'o':'i'} · ${fmt(filteredTotal)}</div>`
     : '';
 
   let bodyHTML = '';
@@ -1531,7 +1536,7 @@ function buildDetailHTML(id) {
         <span style="font-size:11px;color:rgba(255,255,255,.55);margin-top:4px">Vedi foto</span>
       </div>` : ''}
     </div>
-    ${r.note ? `<div class="det-note">${esc(r.note)}</div>` : ''}
+    ${r.note ? `<div class="det-note"><span class="det-note-ico">📝</span>${esc(r.note)}</div>` : ''}
     <div class="det-sec" style="margin-top:14px">
       <h3>Categoria</h3>
       <div class="chips">${chipsHTML}</div>
