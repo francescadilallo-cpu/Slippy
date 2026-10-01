@@ -698,7 +698,7 @@ function openScanner() {
 
 function renderScannerPicker() {
   const html = `
-  <div style="padding:4px 16px 16px">
+  <div style="padding:4px 0 16px">
     <div style="font-size:17px;font-weight:700;text-align:center;margin-bottom:16px;color:var(--lbl)">Aggiungi Scontrino</div>
     <div class="scan-btns">
       <button class="btn btn-p" onclick="closeSheet();triggerCapture(true)">
@@ -714,7 +714,7 @@ function renderScannerPicker() {
         Inserimento Manuale
       </button>
     </div>
-    <p style="font-size:12px;color:var(--lbl2);margin-top:12px;line-height:1.6;text-align:center">
+    <p style="font-size:12px;color:var(--lbl2);margin-top:12px;line-height:1.6;text-align:center;padding:0 16px">
       OCR elaborato nel browser — nessun upload, completamente privato.
     </p>
   </div>`;
