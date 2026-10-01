@@ -438,20 +438,34 @@ function categorize(storeName) {
 
 // ── OCR TEXT PARSING ──────────────────────────────────────────
 function extractStoreName(lines) {
-  const skip = /SCONTRINO|RICEVUTA|FISCALE|CODICE|P\.IVA|C\.F\.|C\.F |VAT|TEL|FAX|WWW\.|HTTP|VIA |CORSO |PIAZZA |LARGO |N\.\s*\d|\*{3}|CASSA|OPERATORE|MATRICOLA|REGISTRATORE/i;
-  const amtRe = /\d{1,4}[.,]\d{2}/;
-  // Prefer all-caps multi-word lines (typical Italian receipt headers)
-  for (const l of lines.slice(0, 10)) {
-    const t = l.trim().replace(/[^\w\s&'.'-]/g, '').trim();
-    if (t.length < 3 || /^\d/.test(t) || skip.test(t) || amtRe.test(t)) continue;
-    if (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) {
-      return t[0] + t.slice(1).toLowerCase().replace(/\b(\w)/g, c => c.toUpperCase());
-    }
+  // Lines that are clearly NOT the store name
+  const skipRe = /SCONTRINO|RICEVUTA|FISCALE|CODICE|P\.IVA|C\.F\b|VAT\b|TEL\.?[\s:]|FAX|WWW\.|HTTP|@|VIA |CORSO |PIAZZA |LARGO |VIALE |N\.\s*\d|\*{3}|CASSA\b|OPERATORE|MATRICOLA|REGISTRATORE|DOCUMENTO|COMMERCIALE|ESERCIZIO|DATA\b|ORA\b|ORE\b|\d{2}:\d{2}/i;
+  const amtRe  = /\d{1,4}[.,]\d{2}/;
+  const dateRe = /\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}/;
+
+  // Score each line in the first 12: prefer all-caps, longer, earlier
+  const candidates = [];
+  for (let i = 0; i < Math.min(12, lines.length); i++) {
+    const raw = lines[i];
+    const t   = raw.trim().replace(/[|\\*#_]/g, '').trim();
+    if (t.length < 3) continue;
+    if (skipRe.test(t) || amtRe.test(t) || dateRe.test(t)) continue;
+    // Favour lines that are mostly letters
+    const letterRatio = (t.match(/[A-Za-zÀ-ú]/g) || []).length / t.length;
+    if (letterRatio < 0.4) continue;
+    const isAllCaps = t === t.toUpperCase() && /[A-Z]{2,}/.test(t);
+    const score = (isAllCaps ? 10 : 0) + t.length - i * 2;
+    candidates.push({ t, isAllCaps, score });
   }
-  // Fallback: first clean non-numeric non-skip line
-  for (const l of lines.slice(0, 8)) {
-    const t = l.trim();
-    if (t.length > 2 && !/^\d/.test(t) && !skip.test(t) && !amtRe.test(t)) return t;
+  candidates.sort((a, b) => b.score - a.score);
+  if (candidates.length) {
+    const best = candidates[0];
+    if (best.isAllCaps) {
+      // Title-case: ESSELUNGA → Esselunga
+      return best.t[0].toUpperCase() + best.t.slice(1).toLowerCase()
+        .replace(/\b([a-z])/g, c => c.toUpperCase());
+    }
+    return best.t;
   }
   return 'Negozio';
 }
@@ -491,33 +505,41 @@ function extractTotal(lines) {
 }
 
 function extractDate(lines) {
+  // Italian fiscal receipts print the transaction date near the BOTTOM
+  // (just above the fiscal code / "DOCUMENTO COMMERCIALE" line).
+  // Scan bottom-up so we hit the real transaction date first.
   const patterns = [
-    /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/,    // dd/mm/yyyy
-    /(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/,    // yyyy-mm-dd
-    /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2})\b/,  // dd/mm/yy
+    { re: /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/, yIdx: 3, mIdx: 2, dIdx: 1 }, // dd/mm/yyyy
+    { re: /(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/, yIdx: 1, mIdx: 2, dIdx: 3 }, // yyyy-mm-dd
+    { re: /(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2})\b/, yIdx: 3, mIdx: 2, dIdx: 1 }, // dd/mm/yy
   ];
-  for (const l of lines) {
-    for (let pi = 0; pi < patterns.length; pi++) {
-      const m = l.match(patterns[pi]);
-      if (!m) continue;
-      let day, month, year;
-      if (pi === 1) { year = +m[1]; month = +m[2]; day = +m[3]; }
-      else { day = +m[1]; month = +m[2]; year = +m[3]; }
-      if (year < 100) year += 2000;
-      const d = new Date(year, month - 1, day);
-      if (!isNaN(d.getTime()) && year >= 2000 && d <= new Date()) {
-        return d.toISOString().split('T')[0];
+  const today = new Date();
+  // First pass: bottom half of receipt (transaction date lives here)
+  const bottomHalf = lines.slice(Math.floor(lines.length / 2));
+  for (let pass = 0; pass < 2; pass++) {
+    const pool = pass === 0 ? [...bottomHalf].reverse() : [...lines].reverse();
+    for (const l of pool) {
+      for (const { re, yIdx, mIdx, dIdx } of patterns) {
+        const m = l.match(re);
+        if (!m) continue;
+        let year = +m[yIdx], month = +m[mIdx], day = +m[dIdx];
+        if (year < 100) year += 2000;
+        if (month < 1 || month > 12 || day < 1 || day > 31) continue;
+        const d = new Date(year, month - 1, day);
+        if (!isNaN(d.getTime()) && year >= 2000 && d <= today) {
+          return d.toISOString().split('T')[0];
+        }
       }
     }
   }
-  return new Date().toISOString().split('T')[0];
+  return today.toISOString().split('T')[0];
 }
 
 function extractItems(lines) {
   const items = [];
   // Price at end of line — allow optional spaces/tabs, quantity prefix "2 x" pattern
   const priceRe = /(\d{1,4}[.,]\d{2})\s*[€ABT]?\s*$/;
-  const skipRe  = /TOTALE|TOTAL|TOT\b|SUBTOT|SUB TOT|SCONTO|IVA\b|CASSA|SCONTRINO|RICEVUTA|OPERATORE|GRAZIE|RESTO|CONTANTE|CARTA|BANCOMAT|POS |CODICE|FISCALE|PAGAMENTO|IMPORTO|DOVUTO|NETTO|LORDO|ESERCENTE|PUNTO\s+VENDITA/i;
+  const skipRe  = /TOTALE|TOTAL|TOT\b|SUBTOT|SUB\s*TOT|SCONTO|IVA\b|CASSA|SCONTRINO|RICEVUTA|OPERATORE|GRAZIE|RESTO|CONTANTE|CARTA\b|CARTA\s+DI|BANCOMAT|POS\b|CODICE|FISCALE|PAGAMENTO|PAGATO|INCASSATO|IMPORTO|DOVUTO|NETTO|LORDO|ESERCENTE|PUNTO\s+VENDITA|MASTERCARD|VISA|AMEX|MAESTRO|SATISPAY|PAYPAL|MONETA|CAMBIO|CREDITO|DEBITO|VOUCHER|TICKET\s+REST|BUONO|ACCONTO|CAPARRA|ANTICIPO|RESO|RIMBORSO|DOCUMENTO\s+COMM/i;
   for (const l of lines) {
     if (skipRe.test(l)) continue;
     const m = l.match(priceRe);
