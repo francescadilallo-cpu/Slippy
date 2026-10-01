@@ -207,7 +207,7 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .scan-pick{display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:20px;padding:60px 32px;text-align:center;min-height:62vh}
 .scan-pick-ico{font-size:68px;opacity:.85}
-.scan-btns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px}
+.scan-btns{display:flex;flex-direction:column;gap:10px;width:100%}
 .processing{display:flex;flex-direction:column;align-items:center;
   gap:20px;padding:80px 32px;text-align:center}
 .spin{width:42px;height:42px;border-radius:50%;border:3px solid var(--fill2);
@@ -288,7 +288,8 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .sbd.on{background:rgba(0,0,0,.45);pointer-events:auto}
 .sht{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-radius:22px 22px 0 0;
   z-index:300;transform:translateY(110%);transition:transform .36s cubic-bezier(.4,0,.2,1);
-  padding-bottom:calc(var(--sb) + 8px)}
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);
+  max-height:85dvh;overflow-y:auto}
 .sht.on{transform:translateY(0)}
 .sht-knob{width:36px;height:4px;background:var(--fill2);border-radius:2px;margin:12px auto 8px}
 
