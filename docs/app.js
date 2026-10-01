@@ -25,12 +25,30 @@ const CATS = [
   { id:'other',       name:'Altro',         icon:'📁', color:'#8E8E93', kw:[] },
 ];
 
+// ── CURRENCIES ───────────────────────────────────────────────
+const CURRENCIES = [
+  { code:'EUR', symbol:'€',   name:'Euro' },
+  { code:'USD', symbol:'$',   name:'Dollaro USA' },
+  { code:'GBP', symbol:'£',   name:'Sterlina' },
+  { code:'CHF', symbol:'CHF', name:'Franco Svizzero' },
+  { code:'JPY', symbol:'¥',   name:'Yen Giapponese' },
+  { code:'CAD', symbol:'CA$', name:'Dollaro Canadese' },
+  { code:'AUD', symbol:'A$',  name:'Dollaro Australiano' },
+  { code:'DKK', symbol:'kr',  name:'Corona Danese' },
+  { code:'SEK', symbol:'kr',  name:'Corona Svedese' },
+  { code:'NOK', symbol:'kr',  name:'Corona Norvegese' },
+];
+function currSym() {
+  const code = state.settings.currency || 'EUR';
+  return CURRENCIES.find(c => c.code === code)?.symbol || code;
+}
+
 // ── STATE ─────────────────────────────────────────────────────
 const state = {
   tab: 'd',
   dashMonth: new Date(),
   receipts: [],
-  settings: { apiKey: '', budget: 0 },
+  settings: { apiKey: '', budget: 0, currency: 'EUR' },
   learned: {},
   ocrData: null,
   detailId: null,
@@ -49,10 +67,10 @@ function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
     const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
-    state.settings = Object.assign({ apiKey: '', budget: 0 }, saved);
+    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR' }, saved);
     state.learned  = JSON.parse(localStorage.getItem('slippy_learned')  || '{}');
   } catch(_) {
-    state.receipts = []; state.settings = { apiKey: '', budget: 0 }; state.learned = {};
+    state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR' }; state.learned = {};
   }
 }
 function saveSettings() { localStorage.setItem('slippy_settings', JSON.stringify(state.settings)); }
@@ -640,7 +658,7 @@ function renderOCRPreview(parsed, imgURL) {
     <div class="fsec">
       <div class="fhdr">Totale</div>
       <div class="frow" style="border-radius:var(--r)">
-        <span class="flbl">€</span>
+        <span class="flbl">${currSym()}</span>
         <input class="finp" id="ft" type="number" step="0.01" value="${parsed.total.toFixed(2)}" placeholder="0.00"/>
       </div>
     </div>
@@ -760,12 +778,12 @@ function openManualEntry() {
     <div class="fsec">
       <div class="fhdr">Totale</div>
       <div class="frow" style="border-radius:var(--r) var(--r) 0 0">
-        <span class="flbl">€</span>
+        <span class="flbl">${currSym()}</span>
         <input class="finp" id="mt" type="number" step="0.01"
           placeholder="0.00" inputmode="decimal"/>
       </div>
       <div class="qa-row">
-        ${[5,10,15,20,30,50].map(v => `<button type="button" class="qa-chip" onclick="setQuickAmt('mt',${v})">€${v}</button>`).join('')}
+        ${[5,10,15,20,30,50].map(v => `<button type="button" class="qa-chip" onclick="setQuickAmt('mt',${v})">${currSym()}${v}</button>`).join('')}
       </div>
     </div>
     <div class="fsec">
@@ -1081,7 +1099,7 @@ function showEditForm(id) {
     <div class="fsec">
       <div class="fhdr">Totale</div>
       <div class="frow" style="border-radius:var(--r)">
-        <span class="flbl">€</span>
+        <span class="flbl">${currSym()}</span>
         <input class="finp" id="et" type="number" step="0.01" value="${(r.totalAmount||0).toFixed(2)}"/>
       </div>
     </div>
@@ -1656,7 +1674,7 @@ function renderReceipts(q) {
   const usedCats = [...new Set(state.receipts.map(r => r.category))];
   const catCounts = {};
   state.receipts.forEach(r => { catCounts[r.category] = (catCounts[r.category] || 0) + 1; });
-  const sortLabel = { date_desc: '↓ Data', date_asc: '↑ Data', amt_desc: '↓ €', amt_asc: '↑ €' };
+  const sortLabel = { date_desc: '↓ Data', date_asc: '↑ Data', amt_desc: '↓ ' + currSym(), amt_asc: '↑ ' + currSym() };
   const nextSort  = { date_desc: 'amt_desc', amt_desc: 'amt_asc', amt_asc: 'date_asc', date_asc: 'date_desc' };
   const filterBar = `
   <div class="filter-bar-row">
@@ -1867,13 +1885,26 @@ function renderSettings() {
   const count = state.receipts.length;
   const key   = state.settings.apiKey || '';
   const budget = state.settings.budget || 0;
+  const curCode = state.settings.currency || 'EUR';
   el.innerHTML = `
   <div class="nav"><h1>Impostazioni</h1></div>
+  <div class="ssel">
+    <div class="sshdr">Valuta</div>
+    <div class="cur-grid">
+      ${CURRENCIES.map(c => `
+        <button class="cur-chip ${c.code === curCode ? 'cur-active' : ''}"
+          onclick="saveCurrency('${c.code}')">
+          <span class="cur-sym">${c.symbol}</span>
+          <span class="cur-code">${c.code}</span>
+        </button>`).join('')}
+    </div>
+    <div class="snote">Usata in tutti i totali e nel budget.</div>
+  </div>
   <div class="ssel">
     <div class="sshdr">Budget Mensile</div>
     <div class="srow si-row" style="border-radius:var(--r)">
       <div class="si-ico" style="background:#34C75922">💰</div>
-      <span class="slbl">€ Budget mensile</span>
+      <span class="slbl">${currSym()} Budget mensile</span>
       <input class="kinp" id="budgetInp" type="number" min="0" step="10"
         placeholder="0" value="${budget > 0 ? budget : ''}"
         style="text-align:right;font-size:15px;font-family:inherit;color:var(--accent);max-width:90px"/>
@@ -1956,6 +1987,16 @@ function saveBudget() {
   toast(v > 0 ? `Budget impostato: ${fmt(v)}/mese` : 'Budget rimosso');
   renderSettings();
   renderDashboard();
+}
+
+function saveCurrency(code) {
+  state.settings.currency = code;
+  saveSettings();
+  haptic('light');
+  toast(`Valuta: ${CURRENCIES.find(c => c.code === code)?.symbol || code} ${code}`);
+  renderSettings();
+  renderDashboard();
+  if (state.tab === 'r') renderReceipts();
 }
 
 function toggleKeyVis() {

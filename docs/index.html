@@ -314,6 +314,15 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 
 /* SETTINGS */
 .ssel{margin:0 16px 20px}
+.cur-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;padding:4px 0 8px}
+.cur-chip{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;
+  background:var(--card);border:1.5px solid transparent;border-radius:12px;
+  cursor:pointer;font-family:inherit;transition:border-color .15s,background .15s}
+.cur-chip:active{transform:scale(.94)}
+.cur-sym{font-size:18px;font-weight:700;color:var(--lbl);line-height:1}
+.cur-code{font-size:9px;font-weight:700;color:var(--lbl2);letter-spacing:.04em}
+.cur-active{border-color:var(--accent)!important;background:color-mix(in srgb,var(--accent) 12%,var(--card))}
+.cur-active .cur-sym,.cur-active .cur-code{color:var(--accent)}
 .sshdr{font-size:10px;font-weight:700;color:var(--lbl2);text-transform:uppercase;
   letter-spacing:.07em;padding:16px 4px 7px}
 .srow{display:flex;align-items:center;background:var(--card);
