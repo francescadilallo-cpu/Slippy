@@ -357,12 +357,18 @@ function categorize(storeName) {
 
 // ── OCR TEXT PARSING ──────────────────────────────────────────
 function extractStoreName(lines) {
+  const skip = /SCONTRINO|RICEVUTA|FISCALE|CODICE|P\.IVA|C\.F\.|VAT|TEL|FAX|VIA |CORSO |PIAZZA |\*/i;
+  // Prefer all-caps lines (typical store headers on Italian receipts)
+  for (const l of lines.slice(0, 8)) {
+    const t = l.trim();
+    if (t.length > 2 && !/^\d/.test(t) && !skip.test(t) && t === t.toUpperCase() && /[A-Z]/.test(t)) {
+      return t[0] + t.slice(1).toLowerCase(); // Title-case it
+    }
+  }
+  // Fallback: first non-numeric, non-skip line
   for (const l of lines.slice(0, 6)) {
     const t = l.trim();
-    if (t.length > 2 && !/^\d/.test(t) &&
-        !/SCONTRINO|RICEVUTA|FISCALE|CODICE|P\.IVA|C\.F\.|VAT|TEL|FAX|\*/i.test(t)) {
-      return t;
-    }
+    if (t.length > 2 && !/^\d/.test(t) && !skip.test(t)) return t;
   }
   return 'Negozio';
 }
@@ -370,7 +376,7 @@ function extractStoreName(lines) {
 function extractTotal(lines) {
   for (let i = lines.length - 1; i >= 0; i--) {
     const l = lines[i];
-    if (/TOTALE|TOTAL(?!\s*IVA)|TOT\b/i.test(l)) {
+    if (/TOTALE|TOTAL(?!\s*IVA)|TOT\b|DA PAGARE|IMPORTO|PAGAMENTO/i.test(l)) {
       const m = l.match(/(\d{1,4}[.,]\d{2})/);
       if (m) return parseFloat(m[1].replace(',', '.'));
     }
@@ -414,7 +420,9 @@ function extractItems(lines) {
     if (m) {
       const price = parseFloat(m[1].replace(',', '.'));
       if (price > 0 && price < 500) {
-        const name = l.replace(m[0], '').trim().replace(/\s{2,}/g, ' ');
+        let name = l.replace(m[0], '').trim().replace(/\s{2,}/g, ' ');
+        // Strip leading item codes like "001 " or "A1 "
+        name = name.replace(/^[A-Z0-9]{1,5}\s+/, '').trim();
         if (name.length > 1) items.push({ name, amount: price });
       }
     }
