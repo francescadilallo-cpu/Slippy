@@ -619,8 +619,9 @@ function extractItems(lines) {
 
 function parseOCRText(text) {
   const cleaned = text
-    .replace(/(\d)[lL](\d{2})\b/g, '$10$2')          // 5l50 → 5.50 (OCR l/1 confusion)
-    .replace(/\bO(\d{2})\b/g, '0$1')                  // O50 → 050
+    .replace(/(\d)[lL](\d{2})\b/g, '$10$2')           // 5l50 → 5.50 (OCR l/1 confusion)
+    .replace(/\bO(\d{2})\b/g, '0$1')                   // O50 → 050
+    .replace(/\)(\s?)(\d{2})\b/g, '9$1$2')             // ) 90 → 9 90 (9 misread as ))
     .replace(/\b(\d{1,4}) (\d{2})(?=\s|$)/gm, '$1,$2'); // "9 90" → "9,90" (space-as-comma)
   const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
   return {
@@ -714,8 +715,8 @@ async function runOCR(file) {
     },
   });
 
-  // PSM 11 = sparse text, find as much as possible — ideal for receipt layouts
-  await worker.setParameters({ tessedit_pageseg_mode: '11' });
+  // PSM 4 = single column variable sizes — reads more letter text than PSM 11 on receipts
+  await worker.setParameters({ tessedit_pageseg_mode: '4' });
   const { data: { text } } = await worker.recognize(target);
   await worker.terminate();
 
