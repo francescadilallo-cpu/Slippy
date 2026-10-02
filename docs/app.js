@@ -541,7 +541,7 @@ function openManualEntry() {
     : '';
   openOverlay('oscanner', `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('oscanner')">‹</button>
+    <button class="back-btn" onclick="closeOverlay('oscanner')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     <h2>Nuovo Scontrino</h2>
     <button class="nav-act" onclick="saveManualEntry()">Salva</button>
   </div>
@@ -1632,7 +1632,7 @@ function buildDetailHTML(id) {
 
   return `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('odetail')">‹ Indietro</button>
+    <button class="back-btn" onclick="closeOverlay('odetail')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Indietro</button>
     <h2>Scontrino</h2>
     <div style="display:flex;gap:6px;align-items:center">
       <button class="back-btn share-btn" onclick="shareReceipt('${id}')" title="Condividi">
