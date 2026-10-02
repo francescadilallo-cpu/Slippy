@@ -19,7 +19,7 @@
   --green:#34C759;--orange:#FF9500;--red:#FF3B30;
   --purple:#AF52DE;--fuel:#FF6B00;--indigo:#5856D6;
   --gray:#8E8E93;
-  --bg:#F2F2F7;--card:#FFFFFF;
+  --bg:#F2F2F7;--card:#FFFFFF;--bg2:rgba(120,120,128,.06);
   --lbl:#1C1C1E;--lbl2:rgba(60,60,67,.52);--lbl3:rgba(60,60,67,.2);
   --sep:rgba(60,60,67,.09);--fill:rgba(120,120,128,.1);--fill2:rgba(120,120,128,.18);
   --st:env(safe-area-inset-top,44px);--sb:env(safe-area-inset-bottom,0px);
@@ -30,7 +30,7 @@
 @media(prefers-color-scheme:dark){:root{
   --bg:#0F0F11;--card:#1C1C1E;
   --lbl:#F5F5F7;--lbl2:rgba(235,235,245,.52);--lbl3:rgba(235,235,245,.2);
-  --sep:rgba(235,235,245,.1);--fill:rgba(120,120,128,.18);--fill2:rgba(120,120,128,.28);
+  --sep:rgba(235,235,245,.1);--fill:rgba(120,120,128,.18);--fill2:rgba(120,120,128,.28);--bg2:rgba(120,120,128,.12);
   --sh:none;
 }}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--lbl);
@@ -63,8 +63,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--lbl);
   position:sticky;top:0;z-index:50;background:var(--bg)}
 .nav-row h2{font-size:16px;font-weight:600;flex:1;text-align:center}
 .back-btn,.nav-act{background:none;border:none;color:var(--accent);
-  font-size:16px;cursor:pointer;padding:6px;display:flex;align-items:center;
-  gap:2px;font-family:inherit;min-width:56px}
+  font-size:17px;cursor:pointer;padding:8px;display:flex;align-items:center;
+  gap:2px;font-family:inherit;min-width:60px;min-height:44px}
 .nav-act{font-weight:600;justify-content:flex-end}
 
 /* TABBAR */
