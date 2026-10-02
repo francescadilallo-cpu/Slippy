@@ -527,10 +527,14 @@ function _doSaveFromForm(name, total, date, catId, note) {
 // ── MANUAL ENTRY ─────────────────────────────────────────────
 function openManualEntry() {
   haptic('light');
+  state.pendingPhoto = null;
   const today = new Date().toISOString().split('T')[0];
   const catsOpt = CATS.map(c =>
     `<option value="${c.id}" ${c.id === 'groceries' ? 'selected' : ''}>${c.icon} ${c.name}</option>`
   ).join('');
+  const aiBtn = state.settings.geminiKey
+    ? `<button class="btn btn-s" id="ai-btn" onclick="analyzeWithAI()" style="gap:6px;margin-top:4px">✨ Analizza con AI</button>`
+    : '';
   openOverlay('oscanner', `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
@@ -538,13 +542,15 @@ function openManualEntry() {
     <button class="nav-act" onclick="saveManualEntry()">Salva</button>
   </div>
   <div style="padding-bottom:40px">
-    <div class="fsec" style="display:flex;gap:8px;align-items:center">
-      <button class="btn btn-s" id="scan-btn" style="flex:1;gap:6px" onclick="startFormScan()">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Scansiona scontrino
-      </button>
+    <div class="fsec">
+      <div class="photo-attach" id="photo-area" onclick="openPhotoOptions()">
+        <div id="photo-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--lbl2);padding:16px 0">
+          <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span style="font-size:13px">Aggiungi foto scontrino (opzionale)</span>
+        </div>
+        <img id="photo-preview" src="" alt="" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:8px"/>
+      </div>
     </div>
-    <img id="scan-preview" src="" alt="" style="display:none;width:100%;border-radius:10px;margin-bottom:4px;max-height:180px;object-fit:cover"/>
     <div class="fsec">
       <div class="fhdr">Negozio</div>
       <div class="frow" style="border-radius:var(--r)">
@@ -590,7 +596,8 @@ function openManualEntry() {
       </div>
     </div>
     <div class="pad"></div>
-    <button class="btn btn-p" onclick="saveManualEntry()">Salva Scontrino</button>
+    ${aiBtn}
+    <button class="btn btn-p" onclick="saveManualEntry()" style="margin-top:8px">Salva Scontrino</button>
     <div class="pad"></div>
   </div>`);
 }
@@ -630,9 +637,11 @@ function _doSaveManual(name, total, date, catId, note) {
   const receipt = {
     id: uid(), storeName: name, totalAmount: total,
     date, createdAt: new Date().toISOString(),
-    category: catId, items, rawText: '', imageDataURL: null,
+    category: catId, items, rawText: '',
+    imageDataURL: state.pendingPhoto || null,
     note: note || undefined,
   };
+  state.pendingPhoto = null;
   state.receipts.unshift(receipt);
   persist();
   if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
@@ -656,53 +665,7 @@ function gotoTab(t) {
 }
 
 function openScanner() {
-  haptic('light');
-  renderScannerPicker();
-}
-
-function renderScannerPicker() {
-  const html = `
-  <div style="padding:4px 0 16px">
-    <div style="font-size:17px;font-weight:700;text-align:center;margin-bottom:16px;color:var(--lbl)">Aggiungi Scontrino</div>
-    <div class="scan-btns">
-      <button class="btn btn-p" onclick="closeSheet();triggerCapture(true)">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Usa Fotocamera
-      </button>
-      <button class="btn btn-s" onclick="closeSheet();triggerCapture(false)">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Scegli dalla Libreria
-      </button>
-      <button class="btn btn-s" onclick="closeSheet();setTimeout(openManualEntry,380)">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Inserimento Manuale
-      </button>
-    </div>
-    <p style="font-size:12px;color:var(--lbl2);margin-top:12px;line-height:1.6;text-align:center;padding:0 16px">
-      OCR elaborato nel browser — nessun upload, completamente privato.
-    </p>
-  </div>`;
-  openSheet(html);
-}
-
-// Helper: open scanner overlay after sheet is closed (called from file input)
-function renderScannerPickerOverlay() {
-  const html = `
-  <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-    <h2>Aggiungi</h2><div style="min-width:56px"></div>
-  </div>
-  <div class="scan-pick">
-    <div class="scan-pick-ico">🧾</div>
-    <div class="scan-btns">
-      <button class="btn btn-p" onclick="triggerCapture(true)">Usa Fotocamera</button>
-      <button class="btn btn-s" onclick="triggerCapture(false)">Scegli dalla Libreria</button>
-    </div>
-    <p style="font-size:13px;color:var(--lbl2);margin-top:8px;line-height:1.6;text-align:center">
-      OCR elaborato nel browser — nessun upload, completamente privato.
-    </p>
-  </div>`;
-  openOverlay('oscanner', html);
+  openManualEntry();
 }
 
 function triggerCapture(camera) {
@@ -712,46 +675,83 @@ function triggerCapture(camera) {
   fi.click();
 }
 
-function startFormScan() {
-  state.ocrMode = 'form';
-  triggerCapture(true);
+function openPhotoOptions() {
+  const html = `
+  <div style="padding:4px 0 16px">
+    <div style="font-size:17px;font-weight:700;text-align:center;margin-bottom:16px;color:var(--lbl)">Foto Scontrino</div>
+    <div class="scan-btns">
+      <button class="btn btn-p" onclick="closeSheet();triggerCapture(true)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Fotocamera
+      </button>
+      <button class="btn btn-s" onclick="closeSheet();triggerCapture(false)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Scegli dalla Libreria
+      </button>
+      ${state.pendingPhoto ? '<button class="btn btn-s" style="color:var(--red,#FF3B30)" onclick="closeSheet();removePendingPhoto()">Rimuovi foto</button>' : ''}
+    </div>
+  </div>`;
+  openSheet(html);
 }
 
-async function fillFormFromFile(file) {
-  const btn = document.getElementById('scan-btn');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analisi…'; }
+function removePendingPhoto() {
+  state.pendingPhoto = null;
+  const prev = document.getElementById('photo-preview');
+  const ph = document.getElementById('photo-placeholder');
+  if (prev) { prev.src = ''; prev.style.display = 'none'; }
+  if (ph) ph.style.display = 'flex';
+}
+
+async function analyzeWithAI() {
+  const key = state.settings.geminiKey;
+  if (!key) { toast('Aggiungi la API key Gemini nelle Impostazioni'); return; }
+  if (!state.pendingPhoto) { toast('Prima aggiungi una foto dello scontrino'); return; }
+
+  const btn = document.getElementById('ai-btn');
+  if (btn) btn.textContent = '⏳ Analisi in corso…';
 
   try {
-    const imgURL = await fileToDataURL(file);
-    const prev = document.getElementById('scan-preview');
-    if (prev) { prev.src = imgURL; prev.style.display = 'block'; }
+    const base64 = state.pendingPhoto.split(',')[1];
+    const mime   = state.pendingPhoto.split(';')[0].split(':')[1];
 
-    const target = await preprocessReceiptImage(file);
-    const worker = await Tesseract.createWorker('eng', 1, {});
-    await worker.setParameters({ tessedit_pageseg_mode: '4' });
-    const { data: { text } } = await worker.recognize(target);
-    await worker.terminate();
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Leggi questo scontrino italiano. Rispondi SOLO con JSON valido (nessun markdown): {"store":"nome negozio","total":9.90,"date":"YYYY-MM-DD","items":[{"name":"prodotto","price":9.90}]}. Usa null per campi non leggibili. La data è in formato italiano dd/mm/yyyy sullo scontrino ma convertila in YYYY-MM-DD.' },
+              { inline_data: { mime_type: mime, data: base64 } }
+            ]
+          }],
+          generationConfig: { temperature: 0, maxOutputTokens: 512 }
+        })
+      }
+    );
 
-    const parsed = parseOCRText(text);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const json = await res.json();
+    const raw  = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const m    = raw.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Risposta non valida');
+    const data = JSON.parse(m[0]);
 
     const mn = document.getElementById('mn');
     const mt = document.getElementById('mt');
     const md = document.getElementById('md');
 
-    let filled = 0;
-    if (mn && parsed.storeName && parsed.storeName !== 'Negozio') { mn.value = parsed.storeName; autoCategory(parsed.storeName); filled++; }
-    if (mt && parsed.total) { mt.value = parsed.total.toFixed(2); filled++; }
-    if (md && parsed.date) { md.value = parsed.date; filled++; }
+    if (mn && data.store)  mn.value = data.store;
+    if (mt && data.total != null) mt.value = Number(data.total).toFixed(2);
+    if (md && data.date)   md.value = data.date;
+    if (mn && data.store)  autoCategory(data.store);
 
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = filled > 0 ? '✓ Pre-compilato — riprova' : '📷 Non riconosciuto — riprova';
-    }
-    if (filled > 0) toast('Campi pre-compilati — controlla e correggi');
-    else toast('Testo non riconosciuto — inserisci manualmente');
+    if (btn) { btn.textContent = '✓ Pre-compilato'; btn.style.color = 'var(--green,#34C759)'; }
+    toast('Campi pre-compilati — controlla e salva');
   } catch (err) {
-    if (btn) { btn.disabled = false; btn.textContent = '📷 Riprova scansione'; }
-    toast('Errore scansione — inserisci manualmente');
+    if (btn) { btn.textContent = '✨ Analizza con AI'; btn.style.color = ''; }
+    toast('Errore AI — ' + (err.message.includes('400') ? 'API key non valida' : 'riprova'));
   }
 }
 
@@ -1750,6 +1750,20 @@ function renderSettings() {
     <div class="snote">Salvata nel browser. Ottieni la tua su console.anthropic.com.</div>
   </div>
   <div class="ssel">
+    <div class="sshdr">AI (Opzionale)</div>
+    <div class="fsec" style="margin:0">
+      <div class="frow" style="border-radius:var(--r) var(--r) 0 0">
+        <input class="finp" style="text-align:left;flex:1" id="gemini-key"
+          type="password" placeholder="Gemini API Key (aistudio.google.com)"
+          value="${esc(state.settings.geminiKey || '')}"/>
+      </div>
+      <div class="frow" style="border-radius:0 0 var(--r) var(--r);border-bottom:none;padding-top:10px;padding-bottom:10px">
+        <button class="btn btn-p" style="width:auto;flex:1;padding:11px;font-size:14px;margin:0" onclick="saveGeminiKey()">Salva</button>
+      </div>
+    </div>
+    <div class="snote">Gratuita su aistudio.google.com — abilita l'analisi automatica degli scontrini.</div>
+  </div>
+  <div class="ssel">
     <div class="sshdr">Dati</div>
     <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'exportCSV()' : ''}">
       <div class="si-ico" style="background:#007AFF22">📤</div>
@@ -1776,14 +1790,9 @@ function renderSettings() {
       <span class="sval">3.0 PWA</span>
     </div>
     <div class="srow si-row">
-      <div class="si-ico" style="background:#34C75922">🔬</div>
-      <span class="slbl">Motore OCR</span>
-      <span class="sval">Tesseract.js 5</span>
-    </div>
-    <div class="srow si-row">
       <div class="si-ico" style="background:#FF950022">🤖</div>
-      <span class="slbl">Modello AI</span>
-      <span class="sval">Claude Sonnet</span>
+      <span class="slbl">Analisi AI</span>
+      <span class="sval">Gemini 2.0 Flash</span>
     </div>
     <div class="srow si-row">
       <div class="si-ico" style="background:#AF52DE22">🌍</div>
@@ -1834,6 +1843,13 @@ function removeApiKey() {
   state.settings.apiKey = '';
   saveSettings();
   toast('API key rimossa');
+  renderSettings();
+}
+function saveGeminiKey() {
+  const v = (document.getElementById('gemini-key')?.value || '').trim();
+  state.settings.geminiKey = v;
+  saveSettings();
+  toast(v ? 'Gemini API key salvata ✓' : 'Gemini API key rimossa');
   renderSettings();
 }
 function exportCSV() {
@@ -2007,25 +2023,12 @@ function init() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    if (state.ocrMode === 'form') {
-      state.ocrMode = null;
-      await fillFormFromFile(file);
-    } else {
-      try { await runOCR(file); } catch (err) {
-        openOverlay('oscanner', `
-        <div class="nav-row">
-          <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-          <h2>Errore</h2><div style="min-width:56px"></div>
-        </div>
-        <div class="empty">
-          <div class="empty-ico">⚠️</div>
-          <h3>Scansione fallita</h3>
-          <p>${esc(err.message || 'Impossibile leggere l\'immagine.')}</p>
-          <button class="btn btn-s" style="width:200px;margin-top:8px"
-            onclick="closeOverlay('oscanner');openScanner()">Riprova</button>
-        </div>`);
-      }
-    }
+    const url = await fileToDataURL(file);
+    state.pendingPhoto = url;
+    const prev = document.getElementById('photo-preview');
+    const ph = document.getElementById('photo-placeholder');
+    if (prev) { prev.src = url; prev.style.display = 'block'; }
+    if (ph) ph.style.display = 'none';
   });
 
   // FAB haptic

@@ -1,4 +1,4 @@
-const CACHE = 'slippy-v49';
+const CACHE = 'slippy-v50';
 const CORE  = ['./', './index.html', './app.js', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -18,7 +18,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = e.request.url;
   // Pass through external APIs and CDNs
-  if (url.includes('anthropic.com') || url.includes('jsdelivr') || url.includes('tesseract')) return;
+  if (url.includes('anthropic.com') || url.includes('jsdelivr') || url.includes('generativelanguage.googleapis.com')) return;
 
   e.respondWith(
     caches.match(e.request).then(cached => {
