@@ -662,13 +662,20 @@ async function preprocessReceiptImage(file) {
     const imgData = ctx.getImageData(0, 0, w, h);
     const d = imgData.data;
 
-    // Greyscale + linear contrast stretch around midpoint
-    // Gentler than hard threshold — handles angled/uneven-lit receipts better
-    for (let i = 0; i < d.length; i += 4) {
+    // Pass 1: greyscale + find actual brightness range
+    const grey = new Uint8Array(d.length >> 2);
+    let minG = 255, maxG = 0;
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
       const g = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
-      // Stretch contrast 1.3× around mid-grey (gentler — preserves faint numbers)
-      const stretched = Math.min(255, Math.max(0, (g - 128) * 1.3 + 128));
-      d[i] = d[i+1] = d[i+2] = stretched;
+      grey[p] = g;
+      if (g < minG) minG = g;
+      if (g > maxG) maxG = g;
+    }
+    // Pass 2: adaptive min-max stretch — works in any lighting condition
+    const range = Math.max(1, maxG - minG);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
+      const v = Math.round((grey[p] - minG) / range * 255);
+      d[i] = d[i+1] = d[i+2] = v;
     }
     ctx.putImageData(imgData, 0, 0);
     return canvas;
@@ -707,12 +714,7 @@ async function runOCR(file) {
     },
   });
 
-  await worker.setParameters({
-    tessedit_pageseg_mode: '4',  // single column, variable text sizes — correct for receipts
-    tessedit_ocr_engine_mode: '1', // LSTM neural net only
-    preserve_interword_spaces: '1',
-  });
-
+  // No setParameters — Tesseract defaults (PSM 3 auto, OEM 3 LSTM+legacy) are most robust
   const { data: { text } } = await worker.recognize(target);
   await worker.terminate();
 
@@ -850,11 +852,10 @@ function renderOCRPreview(parsed, imgURL) {
     </div>
     <div class="pad"></div>
     <button class="btn btn-p" onclick="saveReceiptFromForm()">Salva Scontrino</button>
-    ${parsed.rawText ? `
     <div class="fsec" style="margin-top:8px">
       <div class="fhdr" style="margin-bottom:4px">🔍 Testo OCR grezzo</div>
-      <pre class="ocr-raw">${esc(parsed.rawText.slice(0, 1000))}</pre>
-    </div>` : ''}
+      <pre class="ocr-raw">${parsed.rawText ? esc(parsed.rawText.slice(0, 1500)) : '(nessun testo riconosciuto)'}</pre>
+    </div>
     <div class="pad"></div>
   </div>`;
 }
