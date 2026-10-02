@@ -48,9 +48,10 @@ const state = {
   tab: 'd',
   dashMonth: new Date(),
   receipts: [],
-  settings: { apiKey: '', budget: 0, currency: 'EUR' },
+  settings: { apiKey: '', budget: 0, currency: 'EUR', geminiKey: '' },
   learned: {},
   ocrData: null,
+  pendingPhoto: null,
   detailId: null,
   searchQ: '',
   filterCat: null,
@@ -67,7 +68,7 @@ function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
     const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
-    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR' }, saved);
+    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '' }, saved);
     state.learned  = JSON.parse(localStorage.getItem('slippy_learned')  || '{}');
   } catch(_) {
     state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR' }; state.learned = {};
@@ -436,192 +437,6 @@ function categorize(storeName) {
   return 'other';
 }
 
-// ── OCR TEXT PARSING ──────────────────────────────────────────
-function titleCase(s) {
-  return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase()).trim();
-}
-
-function isGarbled(s) {
-  if (!s || s.length < 2) return true;
-  const tokens = s.trim().split(/\s+/);
-  // Too many single-char tokens → garbage
-  const singleChars = tokens.filter(t => t.replace(/[^A-Za-zÀ-ú]/g, '').length <= 1).length;
-  if (tokens.length >= 3 && singleChars / tokens.length > 0.5) return true;
-  // Too few real letters overall
-  const letters = (s.match(/[A-Za-zÀ-ú]/g) || []).length;
-  if (letters / s.length < 0.35) return true;
-  return false;
-}
-
-function extractStoreName(lines) {
-  const addrRe  = /\bVIA\b|\bV\.LE\b|\bCORSO\b|\bC\.SO\b|\bPIAZZA\b|\bP\.ZA\b|\bVIALE\b|\bLARGO\b|\bLOC\b|\bSTRADA\b|\bS\.S\.\b/i;
-  const skipRe  = /P\.?\s*IVA|C\.?\s*F\.?\s*[:.]|VAT\b|TEL\.?\s*\d|FAX\b|WWW\.|HTTP|[@]|SCONTRINO|RICEVUTA\s+FISC|OPERATORE|MATRICOLA|REGISTRATORE|DOCUMENTO\s+COMM|\d{2}:\d{2}/i;
-  const amtRe   = /\d{1,4}[.,]\d{2}/;
-  const dateRe  = /\d{2}[\/\-.]\d{2}[\/\-.]\d{2}/;
-
-  function clean(l) {
-    let s = l.trim().replace(/^[*|=\-_\s]+|[*|=\-_\s]+$/g, '').trim();
-    // Strip legal suffixes: S.p.A., S.r.l., S.n.c., S.a.s., S.c. etc.
-    s = s.replace(/\s+S\.[rpnas]\.[Aaclr]\S*\.?\s*$/i, '').trim();
-    // Strip lowercase article prefix: "la " / "il " / "lo " → still usable but normalise
-    return s;
-  }
-  function isGood(t) {
-    if (t.length < 2) return false;
-    if (skipRe.test(t) || addrRe.test(t) || amtRe.test(t) || dateRe.test(t)) return false;
-    if (!/[A-Za-zÀ-ú]{2,}/.test(t)) return false;
-    if (isGarbled(t)) return false;
-    return true;
-  }
-
-  // Strategy 1: look at lines BEFORE the first address line (most reliable)
-  const firstAddrIdx = lines.slice(0, 12).findIndex(l => addrRe.test(l));
-  if (firstAddrIdx > 0) {
-    for (let i = 0; i < firstAddrIdx; i++) {
-      const t = clean(lines[i]);
-      if (!isGood(t)) continue;
-      return (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) ? titleCase(t) : t;
-    }
-  }
-
-  // Strategy 2: also check if an address line contains the name before a dash/comma
-  if (firstAddrIdx >= 0) {
-    const addrLine = lines[firstAddrIdx];
-    const parts = addrLine.split(/\s*[-–,]\s*/);
-    if (parts.length > 1) {
-      const before = parts[0].trim();
-      if (before.length > 2 && !/^\d/.test(before)) {
-        return (before === before.toUpperCase()) ? titleCase(before) : before;
-      }
-    }
-  }
-
-  // Strategy 3: simple first-match fallback
-  for (const l of lines.slice(0, 8)) {
-    const t = clean(l);
-    if (!isGood(t)) continue;
-    return (t === t.toUpperCase() && /[A-Z]{2,}/.test(t)) ? titleCase(t) : t;
-  }
-
-  return 'Negozio';
-}
-
-function extractTotal(lines) {
-  // Keywords that signal the total on Italian/generic receipts
-  const totalRe = /TOTALE\s*(COMPLESS|DOVUTO|A PAGARE|EUR|€)?|TOTAL(?!\s*IVA|\s*PARZ|\s*SUBT)|TOT\.?\s*€?|DA\s+PAGARE|IMPORTO\s+(TOT|DOVUTO|PAGATO)|NETTO\s+A\s+PAGARE|AMOUNT\s+DUE|GRAND\s+TOTAL/i;
-  const amtRe = /(\d{1,4}[.,]\d{2})/;
-
-  // Normalize each line locally too (space-decimal fix)
-  const norm = l => l.replace(/\b(\d{1,4}) (\d{2})(?=\s|€|$)/g, '$1,$2');
-
-  // Scan from bottom up — totals appear near the end
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const l = norm(lines[i]);
-    if (totalRe.test(l)) {
-      // Amount on same line?
-      const m = l.match(amtRe);
-      if (m) return parseFloat(m[1].replace(',', '.'));
-      // Amount on next line or previous line?
-      for (const neighbor of [lines[i+1], lines[i-1]]) {
-        if (!neighbor) continue;
-        const m2 = norm(neighbor).match(amtRe);
-        if (m2) return parseFloat(m2[1].replace(',', '.'));
-      }
-    }
-  }
-  // Also try: line with "€" followed by amount near end
-  for (let i = lines.length - 1; i >= Math.max(0, lines.length - 15); i--) {
-    const l = lines[i];
-    const m = l.match(/€\s*(\d{1,4}[.,]\d{2})/);
-    if (m) return parseFloat(m[1].replace(',', '.'));
-  }
-  return 0;
-}
-
-function extractDate(lines) {
-  const today = new Date();
-
-  function parseDate(str) {
-    // dd/mm/yyyy or dd-mm-yyyy or dd.mm.yyyy
-    let m = str.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
-    if (m) {
-      let d = +m[1], mo = +m[2], y = +m[3];
-      if (y < 100) y += 2000;
-      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && y >= 2000) {
-        const dt = new Date(y, mo - 1, d);
-        if (!isNaN(dt) && dt <= today) return dt;
-      }
-    }
-    // yyyy-mm-dd
-    m = str.match(/(\d{4})[\/\-\.](\d{2})[\/\-\.](\d{2})/);
-    if (m) {
-      const y = +m[1], mo = +m[2], d = +m[3];
-      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31 && y >= 2000) {
-        const dt = new Date(y, mo - 1, d);
-        if (!isNaN(dt) && dt <= today) return dt;
-      }
-    }
-    return null;
-  }
-
-  // Collect ALL valid dates found in the receipt, keep each unique date once
-  const found = [];
-  for (const l of lines) {
-    const dt = parseDate(l);
-    if (dt && !found.some(f => f.getTime() === dt.getTime())) {
-      found.push({ dt, hasTime: /\d{2}:\d{2}/.test(l) });
-    }
-  }
-
-  if (found.length === 0) return today.toISOString().split('T')[0];
-
-  // Prefer entries that have a time stamp on the same line (transaction timestamp)
-  const withTime = found.filter(f => f.hasTime);
-  const pool = withTime.length > 0 ? withTime : found;
-
-  // Among those, take the MOST RECENT date (receipt date is today or very recent)
-  pool.sort((a, b) => b.dt - a.dt);
-  return pool[0].dt.toISOString().split('T')[0];
-}
-
-function extractItems(lines) {
-  const items = [];
-  // Price at end of line — allow optional spaces/tabs, quantity prefix "2 x" pattern
-  const priceRe = /(\d{1,4}[.,]\d{2})\s*[€ABT]?\s*$/;
-  const skipRe  = /TOTALE|TOTAL|TOT\b|SUBTOT|SUB\s*TOT|SCONTO|IVA\b|CASSA|SCONTRINO|RICEVUTA|OPERATORE|GRAZIE|RESTO|CONTANTE|CARTA\b|CARTA\s+DI|BANCOMAT|POS\b|CODICE|FISCALE|PAGAMENTO|PAGATO|INCASSATO|IMPORTO|DOVUTO|NETTO|LORDO|ESERCENTE|PUNTO\s+VENDITA|MASTERCARD|VISA|AMEX|MAESTRO|SATISPAY|PAYPAL|MONETA|CAMBIO|CREDITO|DEBITO|VOUCHER|TICKET\s+REST|BUONO|ACCONTO|CAPARRA|ANTICIPO|RESO|RIMBORSO|DOCUMENTO\s+COMM/i;
-  for (const l of lines) {
-    if (skipRe.test(l)) continue;
-    const m = l.match(priceRe);
-    if (!m) continue;
-    const price = parseFloat(m[1].replace(',', '.'));
-    if (price <= 0 || price > 1000) continue;
-    let name = l.slice(0, l.lastIndexOf(m[0])).trim().replace(/\s{2,}/g, ' ');
-    // Strip leading item codes: "001", "A12", "0001"
-    name = name.replace(/^[A-Z0-9]{1,6}\s+/, '').trim();
-    // Strip quantity prefix: "2 X " or "3x "
-    name = name.replace(/^\d+\s*[xX]\s*/, '').trim();
-    if (name.length < 2 || name.length > 50) continue;
-    if (isGarbled(name)) continue; // skip OCR garbage lines
-    items.push({ name, amount: price });
-  }
-  return items.slice(0, 20);
-}
-
-function parseOCRText(text) {
-  const cleaned = text
-    .replace(/(\d)[lL](\d{2})\b/g, '$10$2')           // 5l50 → 5.50 (OCR l/1 confusion)
-    .replace(/\bO(\d{2})\b/g, '0$1')                   // O50 → 050
-    .replace(/\)(\s?)(\d{2})\b/g, '9$1$2')             // ) 90 → 9 90 (9 misread as ))
-    .replace(/\b(\d{1,4}) (\d{2})(?=\s|$)/gm, '$1,$2'); // "9 90" → "9,90" (space-as-comma)
-  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
-  return {
-    storeName: extractStoreName(lines),
-    total:     extractTotal(lines),
-    date:      extractDate(lines),
-    items:     extractItems(lines),
-    rawText:   text,
-  };
-}
 
 // ── FILE → DATA URL ───────────────────────────────────────────
 function fileToDataURL(file) {
@@ -631,157 +446,6 @@ function fileToDataURL(file) {
     r.onerror = rej;
     r.readAsDataURL(file);
   });
-}
-
-// ── IMAGE PREPROCESSING — Otsu binarization ──────────────────
-async function preprocessReceiptImage(file) {
-  try {
-    const bitmap = await createImageBitmap(file);
-    const MAX = 1800;
-    let w = bitmap.width, h = bitmap.height;
-    const longest = Math.max(w, h);
-    if (longest > MAX) { const r = MAX / longest; w = Math.round(w * r); h = Math.round(h * r); }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(bitmap, 0, 0, w, h);
-
-    const imgData = ctx.getImageData(0, 0, w, h);
-    const d = imgData.data;
-    const n = w * h;
-
-    // Pass 1: greyscale
-    const grey = new Uint8Array(n);
-    for (let i = 0, p = 0; i < d.length; i += 4, p++)
-      grey[p] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
-
-    // Pass 2: 3×3 box blur (reduces noise, improves Otsu accuracy)
-    const blur = new Uint8Array(n);
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        let s = 0, c = 0;
-        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-          const ny = y + dy, nx = x + dx;
-          if (ny >= 0 && ny < h && nx >= 0 && nx < w) { s += grey[ny * w + nx]; c++; }
-        }
-        blur[y * w + x] = Math.round(s / c);
-      }
-    }
-
-    // Pass 3: Otsu's threshold — finds optimal B&W cutoff automatically
-    const hist = new Int32Array(256);
-    for (let p = 0; p < n; p++) hist[blur[p]]++;
-    let sum = 0;
-    for (let t = 0; t < 256; t++) sum += t * hist[t];
-    let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
-    for (let t = 0; t < 256; t++) {
-      wB += hist[t]; if (!wB) continue;
-      const wF = n - wB; if (!wF) break;
-      sumB += t * hist[t];
-      const mB = sumB / wB, mF = (sum - sumB) / wF;
-      const v = wB * wF * (mB - mF) * (mB - mF);
-      if (v > maxVar) { maxVar = v; threshold = t; }
-    }
-
-    // Pass 4: binarize
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const v = blur[p] <= threshold ? 0 : 255;
-      d[i] = d[i+1] = d[i+2] = v;
-    }
-    ctx.putImageData(imgData, 0, 0);
-    return canvas;
-  } catch (_) {
-    return file;
-  }
-}
-
-// ── OCR PIPELINE ─────────────────────────────────────────────
-async function runOCR(file) {
-  const imgURL = await fileToDataURL(file);
-  const html   = processingScreenHTML(0);
-  openOverlay('oscanner', html);
-
-  const target = await preprocessReceiptImage(file);
-
-  const worker = await Tesseract.createWorker('eng', 1, {
-    logger: m => {
-      const staticPct = {
-        'loading tesseract core': 5,
-        'loading language traineddata': 12,
-        'initializing api': 22,
-        'initialized api': 30,
-      };
-      let pct;
-      if (m.status === 'recognizing text') {
-        pct = Math.round(30 + (m.progress || 0) * 68);
-      } else if (staticPct[m.status] !== undefined) {
-        pct = staticPct[m.status];
-      } else return;
-      const pe = document.querySelector('.prog-pct');
-      const pb = document.querySelector('.prog-bar');
-      if (pe) pe.textContent = pct + '%';
-      if (pb) pb.style.width  = pct + '%';
-      updateProcSteps(pct);
-    },
-  });
-
-  // PSM 6 = uniform block — works well on cleanly binarized receipt images
-  await worker.setParameters({ tessedit_pageseg_mode: '6' });
-  const { data: { text } } = await worker.recognize(target);
-  await worker.terminate();
-
-  const parsed = parseOCRText(text);
-  parsed.imgDataURL = imgURL;
-  state.ocrData = parsed;
-  renderOCRPreview(parsed, imgURL);
-  if (!parsed.total) {
-    setTimeout(() => {
-      const ft = document.getElementById('ft');
-      if (ft) { ft.style.borderColor = 'var(--orange,#FF9500)'; ft.focus(); }
-      toast('Totale non riconosciuto — inseriscilo manualmente');
-    }, 300);
-  }
-}
-
-function processingScreenHTML(pct) {
-  return `
-  <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-    <h2>Scansione</h2><div style="min-width:56px"></div>
-  </div>
-  <div class="processing">
-    <div class="proc-ring">
-      <span class="proc-ico">🧾</span>
-    </div>
-    <div style="width:100%;max-width:280px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span style="font-size:14px;font-weight:600;color:var(--lbl)">Lettura scontrino</span>
-        <span class="prog-pct" style="font-size:14px;font-weight:700;color:var(--accent)">${pct}%</span>
-      </div>
-      <div style="width:100%;height:6px;background:var(--fill2);border-radius:3px;overflow:hidden">
-        <div class="prog-bar" style="height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-end));border-radius:3px;transition:width .3s;width:${pct}%"></div>
-      </div>
-    </div>
-    <div class="proc-steps">
-      <div class="proc-step ${pct > 15 ? 'done' : ''}">
-        <div class="proc-dot"></div><span>Caricamento immagine</span>
-      </div>
-      <div class="proc-step ${pct > 50 ? 'done' : ''}">
-        <div class="proc-dot"></div><span>Riconoscimento testo</span>
-      </div>
-      <div class="proc-step ${pct >= 100 ? 'done' : ''}">
-        <div class="proc-dot"></div><span>Estrazione dati</span>
-      </div>
-    </div>
-  </div>`;
-}
-
-function updateProcSteps(pct) {
-  const steps = document.querySelectorAll('.proc-step');
-  if (steps[0]) steps[0].classList.toggle('done', pct > 15);
-  if (steps[1]) steps[1].classList.toggle('done', pct > 50);
-  if (steps[2]) steps[2].classList.toggle('done', pct >= 100);
 }
 
 // ── ITEM ROW HELPER ───────────────────────────────────────────
@@ -798,79 +462,6 @@ function addItemRow() {
     <input class="finp" style="width:72px;text-align:right" type="number" step="0.01" placeholder="0.00" id="ita${i}" inputmode="decimal"/>`;
   container.appendChild(row);
   row.querySelector('input').focus();
-}
-
-// ── RENDER: OCR PREVIEW FORM ──────────────────────────────────
-function renderOCRPreview(parsed, imgURL) {
-  const overlay = document.getElementById('oscanner');
-  const catId   = categorize(parsed.storeName);
-  const catsOpt = CATS.map(c =>
-    `<option value="${c.id}" ${c.id === catId ? 'selected' : ''}>${c.icon} ${c.name}</option>`
-  ).join('');
-
-  const itemsRows = parsed.items.map((it, i) => `
-    <div class="frow" style="gap:8px">
-      <input class="finp" style="text-align:left;flex:1" placeholder="Nome prodotto"
-             value="${esc(it.name)}" id="itn${i}"/>
-      <input class="finp" style="width:72px;text-align:right" type="number" step="0.01"
-             value="${it.amount.toFixed(2)}" id="ita${i}"/>
-    </div>`).join('');
-
-  overlay.innerHTML = `
-  <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('oscanner')">‹ Indietro</button>
-    <h2>Conferma</h2>
-    <button class="nav-act" onclick="saveReceiptFromForm()">Salva</button>
-  </div>
-  <div style="padding-bottom:40px">
-    ${imgURL ? `<img src="${imgURL}" class="img-thumb" style="margin:12px auto"/>` : ''}
-    <div class="fsec">
-      <div class="fhdr">Negozio</div>
-      <div class="frow" style="border-radius:var(--r)">
-        <input class="finp" style="text-align:left;flex:1" id="fn" value="${esc(parsed.storeName)}" placeholder="Nome negozio" oninput="autoCategory(this.value)"/>
-      </div>
-    </div>
-    <div class="fsec">
-      <div class="fhdr">Totale</div>
-      <div class="frow" style="border-radius:var(--r)">
-        <span class="flbl">${currSym()}</span>
-        <input class="finp" id="ft" type="number" step="0.01" value="${parsed.total.toFixed(2)}" placeholder="0.00"/>
-      </div>
-    </div>
-    <div class="fsec">
-      <div class="fhdr">Data</div>
-      <div class="frow" style="border-radius:var(--r)">
-        <input class="finp" id="fd" type="date" value="${parsed.date}"/>
-      </div>
-    </div>
-    <div class="fsec">
-      <div class="fhdr">Categoria</div>
-      <div class="frow" style="border-radius:var(--r)">
-        <select class="finp" id="fc">${catsOpt}</select>
-      </div>
-    </div>
-    <div class="fsec" id="items-fsec">
-      <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center">
-        <span>Prodotti</span>
-        <button type="button" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:0" onclick="addItemRow()">+ Aggiungi</button>
-      </div>
-      <div id="items-rows">${itemsRows}</div>
-    </div>
-    <div class="fsec">
-      <div class="fhdr">Note (opzionale)</div>
-      <div class="frow" style="border-radius:var(--r)">
-        <input class="finp" style="text-align:left;flex:1" id="fnote"
-          placeholder="Aggiungi una nota…"/>
-      </div>
-    </div>
-    <div class="pad"></div>
-    <button class="btn btn-p" onclick="saveReceiptFromForm()">Salva Scontrino</button>
-    <div class="fsec" style="margin-top:8px">
-      <div class="fhdr" style="margin-bottom:4px">🔍 Testo OCR grezzo</div>
-      <pre class="ocr-raw">${parsed.rawText ? esc(parsed.rawText.slice(0, 1500)) : '(nessun testo riconosciuto)'}</pre>
-    </div>
-    <div class="pad"></div>
-  </div>`;
 }
 
 // ── DUPLICATE DETECTION ───────────────────────────────────────
@@ -917,8 +508,7 @@ function _doSaveFromForm(name, total, date, catId, note) {
     id: uid(), storeName: name, totalAmount: total,
     date, createdAt: new Date().toISOString(),
     category: catId, items,
-    rawText: state.ocrData?.rawText || '',
-    imageDataURL: state.ocrData?.imgDataURL || null,
+    imageDataURL: state.pendingPhoto || null,
     note: note || undefined,
   };
 
@@ -926,6 +516,7 @@ function _doSaveFromForm(name, total, date, catId, note) {
   persist();
   if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
 
+  state.pendingPhoto = null;
   haptic('medium');
   closeOverlay('oscanner');
   toast('Scontrino salvato!');
@@ -944,6 +535,18 @@ function openManualEntry() {
   const aiBtn = state.settings.geminiKey
     ? `<button class="btn btn-s" id="ai-btn" onclick="analyzeWithAI()" style="gap:6px;margin-top:4px">✨ Analizza con AI</button>`
     : '';
+
+  // Store autocomplete from past receipts
+  const pastStores = [...new Set(state.receipts.map(r => r.storeName).filter(Boolean))].slice(0, 20);
+  const storeList = pastStores.length
+    ? `<datalist id="store-list">${pastStores.map(s => `<option value="${esc(s)}"/>`).join('')}</datalist>`
+    : '';
+
+  // Dynamic quick-amount chips from recent totals (deduplicated, sorted)
+  const recentAmts = [...new Set(
+    state.receipts.slice(0, 30).map(r => r.totalAmount).filter(v => v > 0 && v < 500)
+  )].sort((a, b) => a - b).slice(0, 6);
+  const qAmts = recentAmts.length >= 3 ? recentAmts : [5, 10, 15, 20, 30, 50];
   openOverlay('oscanner', `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
@@ -964,7 +567,9 @@ function openManualEntry() {
       <div class="fhdr">Negozio</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="mn"
-          placeholder="Nome negozio" oninput="autoCategory(this.value)" autofocus/>
+          placeholder="Nome negozio" oninput="autoCategory(this.value)" autofocus
+          list="store-list" autocomplete="off"/>
+      ${storeList}
       </div>
     </div>
     <div class="fsec">
@@ -975,7 +580,7 @@ function openManualEntry() {
           placeholder="0.00" inputmode="decimal"/>
       </div>
       <div class="qa-row">
-        ${[5,10,15,20,30,50].map(v => `<button type="button" class="qa-chip" onclick="setQuickAmt('mt',${v})">${currSym()}${v}</button>`).join('')}
+        ${qAmts.map(v => `<button type="button" class="qa-chip" onclick="setQuickAmt('mt',${v})">${currSym()}${Number(v).toLocaleString('it-IT',{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2})}</button>`).join('')}
       </div>
     </div>
     <div class="fsec">
@@ -1747,12 +1352,12 @@ function renderDashboard() {
       <p class="welcome-sub">Il modo più intelligente di tracciare le spese quotidiane.</p>
     </div>
     <div class="card welcome-steps">
-      <div class="ws-row"><span class="ws-num">1</span><div><strong>Fotografa</strong> uno scontrino con la fotocamera</div></div>
-      <div class="ws-row"><span class="ws-num">2</span><div><strong>Slippy legge</strong> importo e negozio automaticamente</div></div>
-      <div class="ws-row"><span class="ws-num">3</span><div><strong>Analizza</strong> le spese mensili con AI integrata</div></div>
+      <div class="ws-row"><span class="ws-num">1</span><div><strong>Tocca +</strong> e inserisci negozio, importo e data</div></div>
+      <div class="ws-row"><span class="ws-num">2</span><div><strong>Allega la foto</strong> dello scontrino come riferimento</div></div>
+      <div class="ws-row"><span class="ws-num">3</span><div><strong>Analizza</strong> le spese mensili con grafici e AI</div></div>
     </div>
     <button class="welcome-cta" onclick="document.getElementById('fab').click()">Aggiungi il primo scontrino →</button>
-    ${!state.settings.apiKey ? `<p class="welcome-hint">💡 Aggiungi una chiave API Claude nelle Impostazioni per sbloccare l'analisi AI.</p>` : ''}
+    ${!state.settings.apiKey && !state.settings.geminiKey ? `<p class="welcome-hint">💡 Aggiungi una chiave API nelle Impostazioni per sbloccare l'analisi AI.</p>` : ''}
   </div>` : '';
 
   const weekSection    = renderWeekSection(state.receipts);
@@ -1794,12 +1399,12 @@ function renderDashboard() {
     <div class="nudge-arr">›</div>
   </div>` : '';
 
-  const nudgeAI = (!state.settings.apiKey && thisRx.length >= 5 && sameMonth(mo, new Date())) ? `
+  const nudgeAI = (!state.settings.apiKey && !state.settings.geminiKey && thisRx.length >= 5 && sameMonth(mo, new Date())) ? `
   <div class="card nudge-card" onclick="gotoTab('s')">
     <div class="nudge-ico">✦</div>
     <div class="nudge-body">
       <div class="nudge-title">Sblocca l'analisi AI</div>
-      <div class="nudge-sub">Aggiungi la tua API key Claude per ricevere consigli personalizzati.</div>
+      <div class="nudge-sub">Aggiungi una API key Claude o Gemini per ricevere consigli personalizzati.</div>
     </div>
     <div class="nudge-arr">›</div>
   </div>` : '';
@@ -2012,13 +1617,7 @@ function buildDetailHTML(id) {
     </div>
   </div>` : '';
 
-  const rawHTML = r.rawText ? `
-  <div class="det-sec">
-    <h3>Testo OCR</h3>
-    <div class="card" style="padding:12px 16px">
-      <pre style="font-size:11px;white-space:pre-wrap;color:var(--lbl2);font-family:'Menlo',monospace;line-height:1.5">${esc(r.rawText)}</pre>
-    </div>
-  </div>` : '';
+  const rawHTML = '';
 
   const existingTip = state.aiTips[id];
   const tipHTML = existingTip
