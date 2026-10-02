@@ -692,7 +692,7 @@ async function runOCR(file) {
 
   const target = await preprocessReceiptImage(file);
 
-  const worker = await Tesseract.createWorker(['ita', 'eng'], 1, {
+  const worker = await Tesseract.createWorker('eng', 1, {
     logger: m => {
       const staticPct = {
         'loading tesseract core': 5,
@@ -714,7 +714,8 @@ async function runOCR(file) {
     },
   });
 
-  // No setParameters — Tesseract defaults (PSM 3 auto, OEM 3 LSTM+legacy) are most robust
+  // PSM 11 = sparse text, find as much as possible — ideal for receipt layouts
+  await worker.setParameters({ tessedit_pageseg_mode: '11' });
   const { data: { text } } = await worker.recognize(target);
   await worker.terminate();
 
