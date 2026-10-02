@@ -80,7 +80,11 @@ function saveLearned()  { localStorage.setItem('slippy_learned',  JSON.stringify
 // ── HELPERS ───────────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function fmt(n) {
-  return '€ ' + Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const code = state.settings.currency || 'EUR';
+  const cur = CURRENCIES.find(c => c.code === code);
+  const locale = { EUR:'it-IT', GBP:'en-GB', USD:'en-US', JPY:'ja-JP', CHF:'de-CH', CAD:'en-CA', AUD:'en-AU', DKK:'da-DK', SEK:'sv-SE', NOK:'nb-NO' }[code] || 'it-IT';
+  const sym = cur?.symbol || code;
+  return sym + '\u00A0' + Number(n || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtDate(iso) {
   if (!iso) return '';
@@ -537,7 +541,7 @@ function openManualEntry() {
     : '';
   openOverlay('oscanner', `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
+    <button class="back-btn" onclick="closeOverlay('oscanner')">‹</button>
     <h2>Nuovo Scontrino</h2>
     <button class="nav-act" onclick="saveManualEntry()">Salva</button>
   </div>
@@ -548,7 +552,10 @@ function openManualEntry() {
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           <span style="font-size:13px">Aggiungi foto scontrino (opzionale)</span>
         </div>
-        <img id="photo-preview" src="" alt="" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:8px"/>
+        <div id="photo-preview-wrap" style="display:none;position:relative;width:100%">
+          <img id="photo-preview" src="" alt="" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;display:block"/>
+          <button onclick="event.stopPropagation();removePendingPhoto()" aria-label="Rimuovi foto" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+        </div>
       </div>
     </div>
     <div class="fsec">
@@ -697,8 +704,10 @@ function openPhotoOptions() {
 function removePendingPhoto() {
   state.pendingPhoto = null;
   const prev = document.getElementById('photo-preview');
+  const wrap = document.getElementById('photo-preview-wrap');
   const ph = document.getElementById('photo-placeholder');
-  if (prev) { prev.src = ''; prev.style.display = 'none'; }
+  if (prev) prev.src = '';
+  if (wrap) wrap.style.display = 'none';
   if (ph) ph.style.display = 'flex';
 }
 
@@ -770,7 +779,7 @@ function setupSwipe() {
 
     lrow.addEventListener('touchstart', e => {
       startX = e.touches[0].clientX;
-      currentX = 0;
+      currentX = lrow.dataset.revealed === '1' ? -80 : 0;
       dragging = true;
       lrow.style.transition = 'none';
     }, { passive: true });
@@ -778,7 +787,11 @@ function setupSwipe() {
     lrow.addEventListener('touchmove', e => {
       if (!dragging) return;
       const dx = e.touches[0].clientX - startX;
-      currentX = Math.min(0, dx); // only left
+      if (lrow.dataset.revealed === '1') {
+        currentX = Math.min(0, -80 + dx);
+      } else {
+        currentX = Math.min(0, dx);
+      }
       lrow.style.transform = `translateX(${currentX}px)`;
     }, { passive: true });
 
@@ -786,7 +799,7 @@ function setupSwipe() {
       if (!dragging) return;
       dragging = false;
       lrow.style.transition = 'transform .25s ease';
-      if (currentX < -60) {
+      if (currentX < -40) {
         lrow.style.transform = 'translateX(-80px)';
         lrow.dataset.revealed = '1';
         haptic('medium');
@@ -2026,8 +2039,10 @@ function init() {
     const url = await fileToDataURL(file);
     state.pendingPhoto = url;
     const prev = document.getElementById('photo-preview');
+    const wrap = document.getElementById('photo-preview-wrap');
     const ph = document.getElementById('photo-placeholder');
-    if (prev) { prev.src = url; prev.style.display = 'block'; }
+    if (prev) prev.src = url;
+    if (wrap) wrap.style.display = 'block';
     if (ph) ph.style.display = 'none';
   });
 
@@ -2054,6 +2069,17 @@ function init() {
     sht.style.transition = 'transform .36s cubic-bezier(.4,0,.2,1)';
     const dy = e.changedTouches[0].clientY - _shY;
     if (dy > 72) { closeSheet(); } else { sht.style.transform = 'translateY(0)'; }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('sheet')?.classList.contains('open')) { closeSheet(); }
+      else {
+        const overlays = ['oscanner','oedit','odetail','osettings','ostats'];
+        const open = overlays.find(id => document.getElementById(id)?.classList.contains('on'));
+        if (open) closeOverlay(open);
+      }
+    }
   });
 
   renderDashboard();
