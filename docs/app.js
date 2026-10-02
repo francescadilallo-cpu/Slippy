@@ -926,6 +926,13 @@ function openManualEntry() {
     <button class="nav-act" onclick="saveManualEntry()">Salva</button>
   </div>
   <div style="padding-bottom:40px">
+    <div class="fsec" style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-s" id="scan-btn" style="flex:1;gap:6px" onclick="startFormScan()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Scansiona scontrino
+      </button>
+    </div>
+    <img id="scan-preview" src="" alt="" style="display:none;width:100%;border-radius:10px;margin-bottom:4px;max-height:180px;object-fit:cover"/>
     <div class="fsec">
       <div class="fhdr">Negozio</div>
       <div class="frow" style="border-radius:var(--r)">
@@ -1038,7 +1045,7 @@ function gotoTab(t) {
 
 function openScanner() {
   haptic('light');
-  renderScannerPicker();
+  openManualEntry();
 }
 
 function renderScannerPicker() {
@@ -1091,6 +1098,49 @@ function triggerCapture(camera) {
   if (camera) fi.setAttribute('capture', 'environment');
   else        fi.removeAttribute('capture');
   fi.click();
+}
+
+function startFormScan() {
+  state.ocrMode = 'form';
+  triggerCapture(true);
+}
+
+async function fillFormFromFile(file) {
+  const btn = document.getElementById('scan-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Analisi…'; }
+
+  try {
+    const imgURL = await fileToDataURL(file);
+    const prev = document.getElementById('scan-preview');
+    if (prev) { prev.src = imgURL; prev.style.display = 'block'; }
+
+    const target = await preprocessReceiptImage(file);
+    const worker = await Tesseract.createWorker('eng', 1, {});
+    await worker.setParameters({ tessedit_pageseg_mode: '4' });
+    const { data: { text } } = await worker.recognize(target);
+    await worker.terminate();
+
+    const parsed = parseOCRText(text);
+
+    const mn = document.getElementById('mn');
+    const mt = document.getElementById('mt');
+    const md = document.getElementById('md');
+
+    let filled = 0;
+    if (mn && parsed.storeName && parsed.storeName !== 'Negozio') { mn.value = parsed.storeName; autoCategory(parsed.storeName); filled++; }
+    if (mt && parsed.total) { mt.value = parsed.total.toFixed(2); filled++; }
+    if (md && parsed.date) { md.value = parsed.date; filled++; }
+
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = filled > 0 ? '✓ Pre-compilato — riprova' : '📷 Non riconosciuto — riprova';
+    }
+    if (filled > 0) toast('Campi pre-compilati — controlla e correggi');
+    else toast('Testo non riconosciuto — inserisci manualmente');
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = '📷 Riprova scansione'; }
+    toast('Errore scansione — inserisci manualmente');
+  }
 }
 
 function openDetail(id) {
@@ -2345,23 +2395,11 @@ function init() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    // Sheet should be closing (was triggered by triggerCapture inside closeSheet callback)
-    // Open scanner overlay with OCR
-    try {
-      await runOCR(file);
-    } catch (err) {
-      openOverlay('oscanner', `
-      <div class="nav-row">
-        <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
-        <h2>Errore</h2><div style="min-width:56px"></div>
-      </div>
-      <div class="empty">
-        <div class="empty-ico">⚠️</div>
-        <h3>Scansione fallita</h3>
-        <p>${esc(err.message || 'Impossibile leggere l\'immagine.')}</p>
-        <button class="btn btn-s" style="width:200px;margin-top:8px"
-          onclick="closeOverlay('oscanner');openScanner()">Riprova</button>
-      </div>`);
+    if (state.ocrMode === 'form') {
+      state.ocrMode = null;
+      await fillFormFromFile(file);
+    } else {
+      try { await runOCR(file); } catch (err) { toast('Errore scansione — riprova'); }
     }
   });
 
