@@ -726,8 +726,8 @@ async function runOCR(file) {
     },
   });
 
-  // PSM 4 = single column variable sizes — reads more letter text than PSM 11 on receipts
-  await worker.setParameters({ tessedit_pageseg_mode: '4' });
+  // PSM 6 = uniform block — works well on cleanly binarized receipt images
+  await worker.setParameters({ tessedit_pageseg_mode: '6' });
   const { data: { text } } = await worker.recognize(target);
   await worker.terminate();
 
