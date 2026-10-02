@@ -633,18 +633,15 @@ function fileToDataURL(file) {
   });
 }
 
-// ── IMAGE PREPROCESSING (greyscale + contrast + resize) ───────
+// ── IMAGE PREPROCESSING — Otsu binarization ──────────────────
 async function preprocessReceiptImage(file) {
   try {
     const bitmap = await createImageBitmap(file);
-    // 2000px cap worked reliably; larger sizes cause mobile memory issues
-    const MAX = 2000;
+    const MAX = 1800;
     let w = bitmap.width, h = bitmap.height;
     const longest = Math.max(w, h);
-    if (longest > MAX) {
-      const ratio = MAX / longest;
-      w = Math.round(w * ratio); h = Math.round(h * ratio);
-    }
+    if (longest > MAX) { const r = MAX / longest; w = Math.round(w * r); h = Math.round(h * r); }
+
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext('2d');
@@ -652,26 +649,50 @@ async function preprocessReceiptImage(file) {
 
     const imgData = ctx.getImageData(0, 0, w, h);
     const d = imgData.data;
+    const n = w * h;
 
-    // Pass 1: greyscale + find actual brightness range
-    const grey = new Uint8Array(d.length >> 2);
-    let minG = 255, maxG = 0;
-    for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const g = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
-      grey[p] = g;
-      if (g < minG) minG = g;
-      if (g > maxG) maxG = g;
+    // Pass 1: greyscale
+    const grey = new Uint8Array(n);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++)
+      grey[p] = Math.round(0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]);
+
+    // Pass 2: 3×3 box blur (reduces noise, improves Otsu accuracy)
+    const blur = new Uint8Array(n);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let s = 0, c = 0;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const ny = y + dy, nx = x + dx;
+          if (ny >= 0 && ny < h && nx >= 0 && nx < w) { s += grey[ny * w + nx]; c++; }
+        }
+        blur[y * w + x] = Math.round(s / c);
+      }
     }
-    // Pass 2: adaptive min-max stretch — works in any lighting condition
-    const range = Math.max(1, maxG - minG);
+
+    // Pass 3: Otsu's threshold — finds optimal B&W cutoff automatically
+    const hist = new Int32Array(256);
+    for (let p = 0; p < n; p++) hist[blur[p]]++;
+    let sum = 0;
+    for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
+    for (let t = 0; t < 256; t++) {
+      wB += hist[t]; if (!wB) continue;
+      const wF = n - wB; if (!wF) break;
+      sumB += t * hist[t];
+      const mB = sumB / wB, mF = (sum - sumB) / wF;
+      const v = wB * wF * (mB - mF) * (mB - mF);
+      if (v > maxVar) { maxVar = v; threshold = t; }
+    }
+
+    // Pass 4: binarize
     for (let i = 0, p = 0; i < d.length; i += 4, p++) {
-      const v = Math.round((grey[p] - minG) / range * 255);
+      const v = blur[p] <= threshold ? 0 : 255;
       d[i] = d[i+1] = d[i+2] = v;
     }
     ctx.putImageData(imgData, 0, 0);
     return canvas;
   } catch (_) {
-    return file; // fall back to original if preprocessing fails
+    return file;
   }
 }
 
@@ -1045,7 +1066,7 @@ function gotoTab(t) {
 
 function openScanner() {
   haptic('light');
-  openManualEntry();
+  renderScannerPicker();
 }
 
 function renderScannerPicker() {
@@ -2399,7 +2420,20 @@ function init() {
       state.ocrMode = null;
       await fillFormFromFile(file);
     } else {
-      try { await runOCR(file); } catch (err) { toast('Errore scansione — riprova'); }
+      try { await runOCR(file); } catch (err) {
+        openOverlay('oscanner', `
+        <div class="nav-row">
+          <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
+          <h2>Errore</h2><div style="min-width:56px"></div>
+        </div>
+        <div class="empty">
+          <div class="empty-ico">⚠️</div>
+          <h3>Scansione fallita</h3>
+          <p>${esc(err.message || 'Impossibile leggere l\'immagine.')}</p>
+          <button class="btn btn-s" style="width:200px;margin-top:8px"
+            onclick="closeOverlay('oscanner');openScanner()">Riprova</button>
+        </div>`);
+      }
     }
   });
 
