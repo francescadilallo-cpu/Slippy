@@ -535,17 +535,7 @@ function extractTotal(lines) {
     const m = l.match(/€\s*(\d{1,4}[.,]\d{2})/);
     if (m) return parseFloat(m[1].replace(',', '.'));
   }
-  // Last fallback: largest amount in the whole receipt (also catch "9 90" space-decimal)
-  let max = 0;
-  const amtReLoose = /(\d{1,4})[.,\s](\d{2})(?=\s|$)/;
-  for (const l of lines) {
-    let m = l.match(amtRe) || l.match(amtReLoose);
-    if (m) {
-      const v = m[2] ? parseFloat(m[1] + '.' + m[2]) : parseFloat(m[1].replace(',', '.'));
-      if (v > max && v < 10000) max = v;
-    }
-  }
-  return max;
+  return 0;
 }
 
 function extractDate(lines) {
