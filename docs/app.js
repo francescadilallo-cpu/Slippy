@@ -827,7 +827,8 @@ function _doSaveManual(name, total, date, catId, note) {
   let i = 0;
   while (document.getElementById('itn' + i)) {
     const n = (document.getElementById('itn' + i).value || '').trim();
-    const a = parseFloat(document.getElementById('ita' + i).value || '0') || 0;
+    const aVal = (document.getElementById('ita' + i).value || '').trim();
+    const a = aVal === '' ? undefined : (parseFloat(aVal) || 0);
     if (n) items.push({ name: n, price: a });
     i++;
   }
@@ -1821,7 +1822,7 @@ function buildDetailHTML(id) {
       ${r.items.map(it => `
       <div class="irow">
         <span class="in">${esc(it.name)}</span>
-        <span class="ia">${fmt(it.price ?? it.amount)}</span>
+        <span class="ia">${(it.price ?? it.amount) != null ? fmt(it.price ?? it.amount) : '—'}</span>
       </div>`).join('')}
     </div>
   </div>` : '';
@@ -1971,8 +1972,8 @@ function renderSettings() {
         placeholder="sk-ant-…" value="${esc(key)}"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-s" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
-          onclick="toggleKeyVis()">${t('btn.show')} / ${t('btn.hide')}</button>
+        <button class="btn btn-s" id="api-vis-btn" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
+          onclick="toggleKeyVis()">${t('btn.show')}</button>
         <button class="btn btn-p" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
           onclick="saveApiKey()">${t('btn.save')}</button>
       </div>
@@ -2061,7 +2062,11 @@ function saveCurrency(code) {
 
 function toggleKeyVis() {
   const inp = document.getElementById('apik');
-  if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  if (!inp) return;
+  const showing = inp.type === 'password';
+  inp.type = showing ? 'text' : 'password';
+  const btn = document.getElementById('api-vis-btn');
+  if (btn) btn.textContent = showing ? t('btn.hide') : t('btn.show');
 }
 function saveApiKey() {
   const v = (document.getElementById('apik')?.value || '').trim();
@@ -2162,8 +2167,10 @@ function handleCSVImport(input) {
         const itemsRaw = itemsIdx >= 0 ? (cols[itemsIdx] || '') : '';
         const items = itemsRaw
           ? itemsRaw.split(';').map(s => s.trim()).filter(Boolean).map(s => {
-              const [name, price] = s.split(':');
-              return { name: name.trim(), price: price ? parseFloat(price.trim()) : undefined };
+              const ci = s.lastIndexOf(':');
+              if (ci < 0) return { name: s.trim() };
+              const p = parseFloat(s.slice(ci + 1).trim());
+              return { name: s.slice(0, ci).trim(), price: isNaN(p) ? undefined : p };
             })
           : [];
         const note = notesIdx >= 0 ? (cols[notesIdx] || '') : '';
