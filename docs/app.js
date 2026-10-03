@@ -823,7 +823,7 @@ function openManualEntry() {
       <div class="fhdr">${t('form.notes_opt')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="mnote"
-          placeholder="Aggiungi una nota…"/>
+          placeholder="${t('form.note_ph')}"/>
       </div>
     </div>
     <div class="pad"></div>
@@ -955,7 +955,9 @@ async function analyzeWithAI() {
         body: JSON.stringify({
           contents: [{
             parts: [
-              { text: 'Leggi questo scontrino italiano. Rispondi SOLO con JSON valido (nessun markdown): {"store":"nome negozio","total":9.90,"date":"YYYY-MM-DD","items":[{"name":"prodotto","price":9.90}]}. Usa null per campi non leggibili. La data è in formato italiano dd/mm/yyyy sullo scontrino ma convertila in YYYY-MM-DD.' },
+              { text: state.settings.lang === 'en'
+                  ? 'Read this receipt. Reply ONLY with valid JSON (no markdown): {"store":"store name","total":9.90,"date":"YYYY-MM-DD","items":[{"name":"product","price":9.90}]}. Use null for unreadable fields. Convert any date format to YYYY-MM-DD.'
+                  : 'Leggi questo scontrino. Rispondi SOLO con JSON valido (nessun markdown): {"store":"nome negozio","total":9.90,"date":"YYYY-MM-DD","items":[{"name":"prodotto","price":9.90}]}. Usa null per campi non leggibili. Converti qualsiasi formato data in YYYY-MM-DD.' },
               { inline_data: { mime_type: mime, data: base64 } }
             ]
           }],
@@ -1775,7 +1777,7 @@ function renderReceipts(q) {
       bodyHTML += `<div class="sec"><div class="sec-hdr"><span>${esc(grp)}</span><span class="sec-total">${fmt(grpTotal)}</span></div><div class="sec-list">`;
       rows.forEach(r => {
         const cat   = catById(r.category);
-        const freq  = storeFreq[r.storeName || 'Negozio'] || 0;
+        const freq  = storeFreq[r.storeName || t('misc.store')] || 0;
         const badge = freq >= 3 ? `<span class="freq-badge">×${freq}</span>` : '';
         bodyHTML += `
         <div class="rx-wrap">
@@ -2010,7 +2012,7 @@ function renderSettings() {
           value="${esc(state.settings.geminiKey || '')}"/>
       </div>
       <div class="frow" style="border-radius:0 0 var(--r) var(--r);border-bottom:none;padding-top:10px;padding-bottom:10px">
-        <button class="btn btn-p" style="width:auto;flex:1;padding:11px;font-size:14px;margin:0" onclick="saveGeminiKey()">Salva</button>
+        <button class="btn btn-p" style="width:auto;flex:1;padding:11px;font-size:14px;margin:0" onclick="saveGeminiKey()">${t('btn.save')}</button>
       </div>
     </div>
     <div class="snote">${t('set.gemini_note')}</div>
