@@ -730,7 +730,7 @@ function _doSaveFromForm(name, total, date, catId, note) {
   while (document.getElementById('itn' + i)) {
     const n = (document.getElementById('itn' + i).value || '').trim();
     const a = parseFloat(document.getElementById('ita' + i).value || '0') || 0;
-    if (n) items.push({ name: n, amount: a });
+    if (n) items.push({ name: n, price: a });
     i++;
   }
 
@@ -864,7 +864,7 @@ function _doSaveManual(name, total, date, catId, note) {
   while (document.getElementById('itn' + i)) {
     const n = (document.getElementById('itn' + i).value || '').trim();
     const a = parseFloat(document.getElementById('ita' + i).value || '0') || 0;
-    if (n) items.push({ name: n, amount: a });
+    if (n) items.push({ name: n, price: a });
     i++;
   }
   const receipt = {
@@ -1721,11 +1721,14 @@ function renderReceipts(q) {
     return new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt);
   });
   if (query) {
-    list = list.filter(r =>
-      (r.storeName || '').toLowerCase().includes(query) ||
-      catById(r.category).name.toLowerCase().includes(query) ||
-      (r.note || '').toLowerCase().includes(query)
-    );
+    list = list.filter(r => {
+      const cat = catById(r.category);
+      return (r.storeName || '').toLowerCase().includes(query) ||
+        cat.name.toLowerCase().includes(query) ||
+        (cat.nameEn || '').toLowerCase().includes(query) ||
+        (r.note || '').toLowerCase().includes(query) ||
+        (r.items || []).some(it => (it.name || '').toLowerCase().includes(query));
+    });
   }
   if (state.filterCat) {
     list = list.filter(r => r.category === state.filterCat);
@@ -1847,7 +1850,7 @@ function buildDetailHTML(id) {
       ${r.items.map(it => `
       <div class="irow">
         <span class="in">${esc(it.name)}</span>
-        <span class="ia">${fmt(it.price)}</span>
+        <span class="ia">${fmt(it.price ?? it.amount)}</span>
       </div>`).join('')}
     </div>
   </div>` : '';
@@ -2139,7 +2142,7 @@ function exportCSV() {
       state.settings.currency || 'EUR',
       r.date || '',
       r.category || 'other',
-      csvQ((r.items || []).map(i => i.price != null ? `${i.name}:${Number(i.price).toFixed(2)}` : i.name).join('; ')),
+      csvQ((r.items || []).map(i => { const p = i.price ?? i.amount; return p != null ? `${i.name}:${Number(p).toFixed(2)}` : i.name; }).join('; ')),
       csvQ(r.note || r.notes),
     ].join(','));
   });
