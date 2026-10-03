@@ -608,6 +608,23 @@ select.finp{-webkit-appearance:none;cursor:pointer}
 .sw{width:51px;height:31px;border-radius:16px;background:var(--fill2);position:relative;flex-shrink:0;transition:background .2s}
 .sw i{position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.25);transition:transform .2s}
 .sw.on{background:var(--green)}.sw.on i{transform:translateX(20px)}
+#oonb{position:fixed;inset:0;z-index:900;background:var(--bg);display:none;flex-direction:column;
+  padding:calc(var(--st) + 12px) 24px calc(var(--sb) + 28px)}
+#oonb.on{display:flex}
+.onb-top{display:flex;justify-content:space-between;align-items:center;min-height:36px}
+.onb-lang{display:flex;background:var(--fill);border-radius:10px;padding:2px}
+.onb-lang button{border:none;background:none;color:var(--lbl2);font:600 13px inherit;font-family:inherit;padding:6px 12px;border-radius:8px}
+.onb-lang button.on{background:var(--card);color:var(--lbl);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.onb-skip{border:none;background:none;color:var(--accent);font:600 16px inherit;font-family:inherit;padding:8px}
+.onb-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px}
+.onb-ico{width:112px;height:112px;border-radius:30px;display:flex;align-items:center;justify-content:center;font-size:56px;
+  background:linear-gradient(135deg,rgba(0,122,255,.16),rgba(94,92,230,.16));margin-bottom:10px}
+.onb-body h2{font-size:28px;font-weight:800;letter-spacing:-.5px;line-height:1.15}
+.onb-body p{font-size:17px;line-height:1.45;color:var(--lbl2);max-width:320px}
+.onb-bottom{display:flex;flex-direction:column;gap:18px;align-items:stretch}
+.onb-dots{display:flex;gap:8px;justify-content:center}
+.onb-dots i{width:8px;height:8px;border-radius:50%;background:var(--fill2);transition:all .2s}
+.onb-dots i.on{background:var(--accent);width:22px;border-radius:4px}
 </style>
 </head>
 <body>
@@ -618,6 +635,7 @@ select.finp{-webkit-appearance:none;cursor:pointer}
   <div id="oscanner" class="overlay"></div>
   <div id="odetail"  class="overlay"></div>
   <div id="oimg" class="img-ov"></div>
+  <div id="oonb"></div>
 
   <div id="sbd" class="sbd" onclick="closeSheet()"></div>
   <div id="sht" class="sht">

@@ -134,6 +134,51 @@ async function loadPhotos() {
 const NATIVE = !!(window.Capacitor?.isNativePlatform?.());
 const nativePlugin = name => (NATIVE ? window.Capacitor?.Plugins?.[name] : null);
 
+// ── ONBOARDING ────────────────────────────────────────────────
+let _onbStep = 0;
+function showOnboarding() {
+  if (state.settings.onboarded || state.receipts.length > 0) return;
+  _onbStep = 0;
+  document.getElementById('oonb').classList.add('on');
+  renderOnboarding();
+}
+function renderOnboarding() {
+  const slides = [['🧾', 'onb.1'], ['📊', 'onb.2'], ['🔒', 'onb.3']];
+  const [ico, k] = slides[_onbStep];
+  const last = _onbStep === slides.length - 1;
+  document.getElementById('oonb').innerHTML = `
+    <div class="onb-top">
+      <div class="onb-lang">
+        <button class="${state.settings.lang === 'it' ? 'on' : ''}" onclick="onbLang('it')">IT</button>
+        <button class="${state.settings.lang === 'en' ? 'on' : ''}" onclick="onbLang('en')">EN</button>
+      </div>
+      ${last ? '' : `<button class="onb-skip" onclick="finishOnboarding()">${t('onb.skip')}</button>`}
+    </div>
+    <div class="onb-body">
+      <div class="onb-ico">${ico}</div>
+      <h2>${t(k + '_title')}</h2>
+      <p>${t(k + '_text')}</p>
+    </div>
+    <div class="onb-bottom">
+      <div class="onb-dots">${slides.map((_, i) => `<i class="${i === _onbStep ? 'on' : ''}"></i>`).join('')}</div>
+      <button class="btn btn-p" onclick="${last ? 'finishOnboarding()' : 'onbNext()'}">${t(last ? 'onb.start' : 'onb.next')}</button>
+    </div>`;
+}
+function onbNext() { haptic('light'); _onbStep++; renderOnboarding(); }
+function onbLang(l) {
+  state.settings.lang = l;
+  saveSettings();
+  document.documentElement.lang = l;
+  renderOnboarding();
+}
+function finishOnboarding() {
+  state.settings.onboarded = true;
+  saveSettings();
+  document.getElementById('oonb').classList.remove('on');
+  changeLang(state.settings.lang);
+  haptic('light');
+}
+
 // ── BUDGET ALERTS ─────────────────────────────────────────────
 let _booting = true;
 function budgetLevel() {
@@ -198,8 +243,15 @@ function persistAnalysis() {
 function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
-    const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
-    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it', notify: true, alerted: {} }, saved);
+    const rawSettings = localStorage.getItem('slippy_settings');
+    const saved = JSON.parse(rawSettings || '{"apiKey":""}');
+    const loc = (navigator.language || 'it-IT');
+    const region = (loc.split('-')[1] || '').toUpperCase();
+    const defaults = { apiKey: '', budget: 0, geminiKey: '', notify: true, alerted: {},
+      lang: loc.toLowerCase().startsWith('it') ? 'it' : 'en',
+      currency: { GB:'GBP', US:'USD', CA:'CAD', AU:'AUD', CH:'CHF', JP:'JPY', DK:'DKK', SE:'SEK', NO:'NOK' }[region] || 'EUR' };
+    state.settings = Object.assign(defaults, saved);
+    if (state.receipts.length > 0 && state.settings.onboarded === undefined) state.settings.onboarded = true;
     state.learned         = JSON.parse(localStorage.getItem('slippy_learned')   || '{}');
     state.aiTips          = JSON.parse(localStorage.getItem('slippy_tips')      || '{}');
     state.monthlyAnalysis = JSON.parse(localStorage.getItem('slippy_analysis')  || '{}');
@@ -602,6 +654,10 @@ const LANG = {
     'btn.show':'Mostra','btn.hide':'Nascondi','btn.remove_key':'Rimuovi Chiave',
     'btn.save_budget':'Salva Budget','btn.prev_month':'Mese precedente','btn.next_month':'Mese successivo',
     'misc.streak_days':'gg',
+    'onb.skip':'Salta','onb.next':'Avanti','onb.start':'Inizia',
+    'onb.1_title':'Ogni scontrino al suo posto','onb.1_text':'Aggiungi uno scontrino in pochi secondi, con foto, prodotti e note. La categoria si sceglie da sola.',
+    'onb.2_title':'Capisci dove vanno i tuoi soldi','onb.2_text':'Dashboard mensile, calendario delle spese, previsione di fine mese e avvisi quando ti avvicini al budget.',
+    'onb.3_title':'Privato per design','onb.3_text':'I tuoi dati restano sul tuo iPhone. Nessun account, nessuna pubblicità. L\'AI è facoltativa e usa la tua chiave.',
     'rx.period_all':'Sempre','rx.period_month':'Questo mese','rx.period_last':'Mese scorso','rx.period_3m':'3 mesi','rx.period_year':'Quest\'anno',
     'set.notify':'Avvisi budget','set.notify_note':'Ricevi un avviso all\'80% e al 100% del budget mensile.',
     'notify.80_title':'Attenzione al budget','notify.80_body':'Hai speso il {pct}% del budget di {month}: {amount} su {budget}.',
@@ -712,6 +768,10 @@ const LANG = {
     'btn.show':'Show','btn.hide':'Hide','btn.remove_key':'Remove Key',
     'btn.save_budget':'Save Budget','btn.prev_month':'Previous month','btn.next_month':'Next month',
     'misc.streak_days':'d',
+    'onb.skip':'Skip','onb.next':'Next','onb.start':'Get started',
+    'onb.1_title':'Every receipt in its place','onb.1_text':'Add a receipt in seconds, with photo, items and notes. The category picks itself.',
+    'onb.2_title':'See where your money goes','onb.2_text':'Monthly dashboard, spending calendar, end-of-month forecast and alerts when you near your budget.',
+    'onb.3_title':'Private by design','onb.3_text':'Your data stays on your iPhone. No account, no ads. AI is optional and uses your own key.',
     'rx.period_all':'All time','rx.period_month':'This month','rx.period_last':'Last month','rx.period_3m':'3 months','rx.period_year':'This year',
     'set.notify':'Budget alerts','set.notify_note':'Get an alert at 80% and 100% of your monthly budget.',
     'notify.80_title':'Budget warning','notify.80_body':'You have spent {pct}% of your {month} budget: {amount} of {budget}.',
@@ -2644,6 +2704,7 @@ function init() {
 
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
   checkBudgetAlert(true);
+  showOnboarding();
   loadPhotos().then(() => {
     renderDashboard();
     if (state.tab === 'r') renderReceipts();
