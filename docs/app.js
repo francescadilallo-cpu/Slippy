@@ -1189,6 +1189,7 @@ function setupSwipe() {
         currentX = Math.min(0, dx);
       }
       lrow.style.transform = `translateX(${currentX}px)`;
+      lrow.parentElement.classList.add('swiping');
     }, { passive: true });
 
     lrow.addEventListener('touchend', () => {
@@ -1202,6 +1203,7 @@ function setupSwipe() {
       } else {
         lrow.style.transform = 'translateX(0)';
         lrow.dataset.revealed = '0';
+        lrow.parentElement.classList.remove('swiping');
       }
     });
   });
@@ -1215,6 +1217,7 @@ function handleRowTap(id) {
     lrow.style.transition = 'transform .25s ease';
     lrow.style.transform = 'translateX(0)';
     lrow.dataset.revealed = '0';
+    lrow.parentElement.classList.remove('swiping');
     return;
   }
   openDetail(id);
