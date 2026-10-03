@@ -2187,7 +2187,12 @@ function handleCSVImport(input) {
         if (existing.has(id)) return;
         const store = cols[storeIdx] || t('misc.store');
         const total = parseFloat((cols[totalIdx] || '0').replace(',', '.')) || 0;
-        const date  = dateIdx >= 0 && cols[dateIdx] ? cols[dateIdx] : localDateStr();
+        if (!(total > 0)) return;
+        const rawDate = dateIdx >= 0 ? (cols[dateIdx] || '').trim() : '';
+        const dm = rawDate.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate
+          : dm ? `${dm[3]}-${dm[2].padStart(2,'0')}-${dm[1].padStart(2,'0')}`
+          : localDateStr();
         const rawCat = catIdx >= 0 ? (cols[catIdx] || '').toLowerCase().trim() : '';
         const category = validCatIds.has(rawCat) ? rawCat : 'other';
         const itemsRaw = itemsIdx >= 0 ? (cols[itemsIdx] || '') : '';
