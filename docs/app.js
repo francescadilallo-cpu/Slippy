@@ -504,6 +504,7 @@ const LANG = {
     'set.currency_note':'Usata in tutti i totali e nel budget.',
     'set.budget_note':'Imposta un budget mensile per monitorare la spesa nella Dashboard.',
     'set.claude_note':'Salvata nel browser. Ottieni la tua su console.anthropic.com.',
+    'set.gemini_ph':'Gemini API Key (aistudio.google.com)',
     'set.gemini_note':'Gratuita su aistudio.google.com — abilita l\'analisi automatica degli scontrini.',
     'set.data_note':'I dati sono archiviati localmente sul tuo dispositivo.',
     'set.tagline':'Fotografa lo scontrino. Conosci la tua spesa.',
@@ -602,6 +603,7 @@ const LANG = {
     'set.currency_note':'Used in all totals and budget.',
     'set.budget_note':'Set a monthly budget to monitor spending in the Dashboard.',
     'set.claude_note':'Saved in browser. Get yours at console.anthropic.com.',
+    'set.gemini_ph':'Gemini API Key (aistudio.google.com)',
     'set.gemini_note':'Free at aistudio.google.com — enables automatic receipt analysis.',
     'set.data_note':'Data is stored locally on your device.',
     'set.tagline':'Photograph the receipt. Know your spending.',
@@ -2021,7 +2023,7 @@ function renderSettings() {
     <div class="fsec" style="margin:0">
       <div class="frow" style="border-radius:var(--r) var(--r) 0 0">
         <input class="finp" style="text-align:left;flex:1" id="gemini-key"
-          type="password" placeholder="Gemini API Key (aistudio.google.com)"
+          type="password" placeholder="${t('set.gemini_ph')}"
           value="${esc(state.settings.geminiKey || '')}"/>
       </div>
       <div class="frow" style="border-radius:0 0 var(--r) var(--r);border-bottom:none;padding-top:10px;padding-bottom:10px">
@@ -2032,7 +2034,7 @@ function renderSettings() {
   </div>
   <div class="ssel">
     <div class="sshdr">${t('set.data')}</div>
-    <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'exportCSV()' : ''}">
+    <div class="srow si-row" style="${count ? 'cursor:pointer' : ''}" onclick="${count ? 'exportCSV()' : ''}">
       <div class="si-ico" style="background:#007AFF22">📤</div>
       <span class="slbl" style="${!count ? 'color:var(--lbl3)' : ''}">${t('set.export')}</span>
       <span class="sval">${t('misc.receipt_count', {n: count, s: state.settings.lang === 'en' ? (count===1?'':'s') : (count===1?'o':'i')})}</span>
@@ -2047,7 +2049,7 @@ function renderSettings() {
       <span class="slbl">${t('set.template')}</span>
     </div>
     <input type="file" id="csv-import-inp" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(this)"/>
-    <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'clearAllData()' : ''}">
+    <div class="srow si-row" style="${count ? 'cursor:pointer' : ''}" onclick="${count ? 'clearAllData()' : ''}">
       <div class="si-ico" style="background:#FF3B3022">🗑️</div>
       <span class="slbl" style="${!count ? 'color:var(--lbl3)' : 'color:var(--red)'}">${t('set.delete_all')}</span>
     </div>
@@ -2064,16 +2066,6 @@ function renderSettings() {
       <div class="si-ico" style="background:#FF950022">🤖</div>
       <span class="slbl">${t('set.ai_engine')}</span>
       <span class="sval">Gemini 2.0 Flash</span>
-    </div>
-    <div class="srow si-row" style="flex-direction:column;align-items:stretch;padding:12px 16px;gap:10px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="si-ico" style="background:#AF52DE22">🌍</div>
-        <span class="slbl">${t('set.language')}</span>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn ${state.settings.lang === 'it' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:10px;font-size:14px;margin:0" onclick="changeLang('it')">🇮🇹 Italiano</button>
-        <button class="btn ${state.settings.lang === 'en' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:10px;font-size:14px;margin:0" onclick="changeLang('en')">🇬🇧 English</button>
-      </div>
     </div>
   </div>
   <div class="settings-brand">
