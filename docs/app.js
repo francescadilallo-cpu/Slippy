@@ -64,14 +64,18 @@ const state = {
 function persist() {
   try { localStorage.setItem('slippy_receipts', JSON.stringify(state.receipts)); } catch(_) {}
 }
+function persistTips() {
+  try { localStorage.setItem('slippy_tips', JSON.stringify(state.aiTips)); } catch(_) {}
+}
 function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
     const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
     state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it' }, saved);
     state.learned  = JSON.parse(localStorage.getItem('slippy_learned')  || '{}');
+    state.aiTips   = JSON.parse(localStorage.getItem('slippy_tips')     || '{}');
   } catch(_) {
-    state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR', lang: 'it' }; state.learned = {};
+    state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR', lang: 'it' }; state.learned = {}; state.aiTips = {};
   }
 }
 function saveSettings() { localStorage.setItem('slippy_settings', JSON.stringify(state.settings)); }
@@ -1057,7 +1061,9 @@ function quickDelete(id) {
   confirmSheet(t('confirm.delete_quick'), t('btn.delete'), () => {
     haptic('heavy');
     state.receipts = state.receipts.filter(x => x.id !== id);
+    delete state.aiTips[id];
     persist();
+    persistTips();
     toast(t('toast.deleted'));
     renderDashboard();
     renderReceipts();
@@ -1942,7 +1948,9 @@ function confirmDelete(id) {
   confirmSheet(t('confirm.delete'), t('btn.delete'), () => {
     haptic('heavy');
     state.receipts = state.receipts.filter(x => x.id !== id);
+    delete state.aiTips[id];
     persist();
+    persistTips();
     closeOverlay('odetail');
     toast(t('toast.deleted'));
     renderDashboard();
@@ -2245,6 +2253,7 @@ function clearAllData() {
     state.receipts = [];
     state.aiTips   = {};
     persist();
+    localStorage.removeItem('slippy_tips');
     toast(t('toast.data_deleted'));
     renderDashboard();
     renderReceipts();
@@ -2301,6 +2310,7 @@ async function fetchTip(receiptId) {
     const data = await res.json();
     const tip  = data.content?.[0]?.text?.trim() || t('toast.no_advice');
     state.aiTips[receiptId] = tip;
+    persistTips();
 
     if (tipEl) tipEl.innerHTML = `
       <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>${t('dash.ai_tip')}</h3><span class="ai-badge">Claude</span></div>
@@ -2361,7 +2371,7 @@ function init() {
     if (e.key === 'Escape') {
       if (document.getElementById('sht')?.classList.contains('on')) { closeSheet(); }
       else {
-        const overlays = ['oscanner','oedit','odetail','osettings','ostats'];
+        const overlays = ['oscanner','odetail'];
         const open = overlays.find(id => document.getElementById(id)?.classList.contains('on'));
         if (open) closeOverlay(open);
       }
