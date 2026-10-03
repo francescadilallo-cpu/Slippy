@@ -62,6 +62,8 @@ const state = {
   detailId: null,
   searchQ: '',
   filterCat: null,
+  filterPeriod: 'all',
+  filterDay: null,
   sortOrder: 'date_desc',
   aiTips: {},
   monthlyAnalysis: {},
@@ -600,6 +602,7 @@ const LANG = {
     'btn.show':'Mostra','btn.hide':'Nascondi','btn.remove_key':'Rimuovi Chiave',
     'btn.save_budget':'Salva Budget','btn.prev_month':'Mese precedente','btn.next_month':'Mese successivo',
     'misc.streak_days':'gg',
+    'rx.period_all':'Sempre','rx.period_month':'Questo mese','rx.period_last':'Mese scorso','rx.period_3m':'3 mesi','rx.period_year':'Quest\'anno',
     'set.notify':'Avvisi budget','set.notify_note':'Ricevi un avviso all\'80% e al 100% del budget mensile.',
     'notify.80_title':'Attenzione al budget','notify.80_body':'Hai speso il {pct}% del budget di {month}: {amount} su {budget}.',
     'notify.100_title':'Budget superato','notify.100_body':'Hai superato il budget di {month}: {amount} su {budget}.',
@@ -709,6 +712,7 @@ const LANG = {
     'btn.show':'Show','btn.hide':'Hide','btn.remove_key':'Remove Key',
     'btn.save_budget':'Save Budget','btn.prev_month':'Previous month','btn.next_month':'Next month',
     'misc.streak_days':'d',
+    'rx.period_all':'All time','rx.period_month':'This month','rx.period_last':'Last month','rx.period_3m':'3 months','rx.period_year':'This year',
     'set.notify':'Budget alerts','set.notify_note':'Get an alert at 80% and 100% of your monthly budget.',
     'notify.80_title':'Budget warning','notify.80_body':'You have spent {pct}% of your {month} budget: {amount} of {budget}.',
     'notify.100_title':'Budget exceeded','notify.100_body':'You have exceeded your {month} budget: {amount} of {budget}.',
@@ -1243,6 +1247,24 @@ function setFilter(cat) {
   renderReceipts();
 }
 
+function setPeriod(p) {
+  state.filterPeriod = p;
+  state.filterDay = null;
+  renderReceipts();
+}
+function clearDay() {
+  state.filterDay = null;
+  renderReceipts();
+}
+function periodRange(p) {
+  const n = new Date(), y = n.getFullYear(), m = n.getMonth();
+  if (p === 'month') return [new Date(y, m, 1), new Date(y, m + 1, 1)];
+  if (p === 'last')  return [new Date(y, m - 1, 1), new Date(y, m, 1)];
+  if (p === '3m')    return [new Date(y, m - 2, 1), new Date(y, m + 1, 1)];
+  if (p === 'year')  return [new Date(y, 0, 1), new Date(y + 1, 0, 1)];
+  return null;
+}
+
 function setSort(order) {
   state.sortOrder = order;
   renderReceipts();
@@ -1251,6 +1273,8 @@ function setSort(order) {
 function drillStore(name) {
   haptic('light');
   state.filterCat = null;
+  state.filterPeriod = 'all';
+  state.filterDay = null;
   gotoTab('r');
   renderReceipts(name);
 }
@@ -1572,8 +1596,10 @@ function renderCalendarSection(thisRx, mo) {
 function calDayTap(year, month, day) {
   const d = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
   state.filterCat = null;
+  state.filterPeriod = 'all';
+  state.filterDay = d;
+  state.searchQ = '';
   gotoTab('r');
-  renderReceipts(d.slice(0, 7));
 }
 
 // ── RENDER: BUDGET SECTION ────────────────────────────────────
@@ -1903,6 +1929,9 @@ function renderReceipts(q) {
   if (state.filterCat) {
     list = list.filter(r => r.category === state.filterCat);
   }
+  const range = periodRange(state.filterPeriod);
+  if (range) list = list.filter(r => { const d = parseDate(r.date || r.createdAt); return d >= range[0] && d < range[1]; });
+  if (state.filterDay) list = list.filter(r => (r.date || localDateStr(parseDate(r.createdAt))) === state.filterDay);
 
   // Build store frequency map for recurring badge
   const storeFreq = {};
@@ -1933,7 +1962,14 @@ function renderReceipts(q) {
     <button class="sort-btn" onclick="setSort('${nextSort[state.sortOrder] || 'date_desc'}')">${sortLabel[state.sortOrder] || ('↓ ' + dateStr)}</button>
   </div>`;
 
-  const isFiltered = query || state.filterCat;
+  const periodBar = `
+  <div class="period-row">${state.filterDay
+    ? `<button class="fchip on" onclick="clearDay()">📅 ${fmtDate(state.filterDay)} ✕</button>`
+    : ['all','month','last','3m','year'].map(p =>
+        `<button class="fchip ${state.filterPeriod === p ? 'on' : ''}" onclick="setPeriod('${p}')">${t('rx.period_' + p)}</button>`).join('')}
+  </div>`;
+
+  const isFiltered = query || state.filterCat || state.filterDay || state.filterPeriod !== 'all';
   const filteredTotal = list.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const countLine = isFiltered && list.length > 0
     ? `<div class="result-count">${t('misc.results', {n: list.length, s: state.settings.lang === 'en' ? (list.length===1?'':'s') : (list.length===1?'o':'i'), amount: fmt(filteredTotal)})}</div>`
@@ -1994,7 +2030,7 @@ function renderReceipts(q) {
       value="${esc(state.searchQ)}" oninput="renderReceipts(this.value)"/>
     ${state.searchQ ? `<button class="search-clear" onclick="renderReceipts('')" aria-label="${t('aria.clear_search')}">✕</button>` : ''}
   </div>
-  ${usedCats.length > 0 ? filterBar : ''}
+  ${usedCats.length > 0 ? filterBar + periodBar : ''}
   ${countLine}
   ${bodyHTML}
   <div class="pad-xl"></div>`;
