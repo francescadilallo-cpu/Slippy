@@ -483,6 +483,7 @@ const LANG = {
     'toast.need_claude_key':'Aggiungi la tua API key Claude nelle Impostazioni',
     'toast.need_gemini_key':'Aggiungi la API key Gemini nelle Impostazioni',
     'toast.need_photo':'Prima aggiungi una foto dello scontrino',
+    'toast.photo_error':'Impossibile caricare la foto',
     'toast.prefilled':'Campi pre-compilati — controlla e salva',
     'toast.ai_key_error':'Errore AI — API key non valida',
     'toast.ai_error':'Errore AI — riprova','toast.enter_total':'Inserisci il totale',
@@ -583,6 +584,7 @@ const LANG = {
     'toast.need_claude_key':'Add your Claude API key in Settings',
     'toast.need_gemini_key':'Add your Gemini API key in Settings',
     'toast.need_photo':'First add a photo of the receipt',
+    'toast.photo_error':'Could not load the photo',
     'toast.prefilled':'Fields pre-filled — check and save',
     'toast.ai_key_error':'AI error — invalid API key',
     'toast.ai_error':'AI error — try again','toast.enter_total':'Enter the total',
@@ -690,12 +692,26 @@ function categorize(storeName) {
 }
 
 
-// ── FILE → DATA URL ───────────────────────────────────────────
+// ── FILE → DATA URL (resized to max 1200px, ≤500KB) ───────────
 function fileToDataURL(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
-    r.onload = e => res(e.target.result);
     r.onerror = rej;
+    r.onload = e => {
+      const img = new Image();
+      img.onerror = rej;
+      img.onload = () => {
+        const MAX = 1200;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        res(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = e.target.result;
+    };
     r.readAsDataURL(file);
   });
 }
@@ -2255,7 +2271,7 @@ async function fetchTip(receiptId) {
   try {
     const cat    = catById(r.category);
     const itemsLine = r.items?.length > 0
-      ? ` Prodotti: ${r.items.slice(0,5).map(i=>i.name).join(', ')}.`
+      ? ` ${isEn ? 'Products' : 'Prodotti'}: ${r.items.slice(0,5).map(i=>i.name).join(', ')}.`
       : '';
     const isEn = state.settings.lang === 'en';
     const prompt = isEn
@@ -2307,14 +2323,16 @@ function init() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
-    const url = await fileToDataURL(file);
-    state.pendingPhoto = url;
-    const prev = document.getElementById('photo-preview');
-    const wrap = document.getElementById('photo-preview-wrap');
-    const ph = document.getElementById('photo-placeholder');
-    if (prev) prev.src = url;
-    if (wrap) wrap.style.display = 'block';
-    if (ph) ph.style.display = 'none';
+    try {
+      const url = await fileToDataURL(file);
+      state.pendingPhoto = url;
+      const prev = document.getElementById('photo-preview');
+      const wrap = document.getElementById('photo-preview-wrap');
+      const ph = document.getElementById('photo-placeholder');
+      if (prev) prev.src = url;
+      if (wrap) wrap.style.display = 'block';
+      if (ph) ph.style.display = 'none';
+    } catch (_) { toast(t('toast.photo_error')); }
   });
 
   // FAB haptic
