@@ -320,7 +320,7 @@ async function fetchMonthlyAnalysis(monthKey) {
     const catMap = {};
     rx.forEach(r => { catMap[r.category] = (catMap[r.category]||0) + (r.totalAmount||0); });
     const catLines = Object.entries(catMap).sort((a,b)=>b[1]-a[1])
-      .map(([k,v]) => `${catById(k).icon} ${catById(k).name}: ${fmt(v)}`).join(', ');
+      .map(([k,v]) => `${catById(k).icon} ${catName(catById(k))}: ${fmt(v)}`).join(', ');
 
     const isEn = state.settings.lang === 'en';
     const prompt = isEn
