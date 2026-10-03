@@ -2,6 +2,13 @@
 // SLIPPY PWA — app.js
 // ============================================================
 
+// ── CONFIG ───────────────────────────────────────────────────
+const MODELS = {
+  claudeTip: 'claude-haiku-4-5-20251001',
+  claudeAnalysis: 'claude-sonnet-5-5',
+  gemini: 'gemini-2.5-flash',
+};
+
 // ── CATEGORIES ───────────────────────────────────────────────
 const CATS = [
   { id:'groceries', nameEn:'Groceries',   name:'Alimentari',    icon:'🛒', color:'#30D158',
@@ -61,8 +68,74 @@ const state = {
 };
 
 // ── STORAGE ───────────────────────────────────────────────────
+// ── PHOTO STORE (IndexedDB) ───────────────────────────────────
+let _idb = null, _idbOk = true;
+const _photoSaved = new Set();
+function idbOpen() {
+  if (_idb) return _idb;
+  _idb = new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error('no idb'));
+    const rq = indexedDB.open('slippy', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('photos');
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+  _idb.catch(() => { _idbOk = false; });
+  return _idb;
+}
+function idbTx(mode, fn) {
+  return idbOpen().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('photos', mode);
+    const out = fn(tx.objectStore('photos'));
+    tx.oncomplete = () => res(out && out.result !== undefined ? out.result : undefined);
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error);
+  }));
+}
+function syncPhotos() {
+  if (!_idbOk) return;
+  const live = new Set();
+  state.receipts.forEach(r => {
+    if (!r.imageDataURL) return;
+    live.add(r.id);
+    if (_photoSaved.has(r.id)) return;
+    _photoSaved.add(r.id);
+    idbTx('readwrite', st => st.put(r.imageDataURL, r.id)).catch(() => { _photoSaved.delete(r.id); });
+  });
+  [..._photoSaved].forEach(id => {
+    if (live.has(id)) return;
+    _photoSaved.delete(id);
+    idbTx('readwrite', st => st.delete(id)).catch(() => {});
+  });
+}
+async function loadPhotos() {
+  try {
+    const db = await idbOpen();
+    const photos = await new Promise((res, rej) => {
+      const out = {};
+      const rq = db.transaction('photos', 'readonly').objectStore('photos').openCursor();
+      rq.onsuccess = () => {
+        const c = rq.result;
+        if (c) { out[c.key] = c.value; c.continue(); } else res(out);
+      };
+      rq.onerror = () => rej(rq.error);
+    });
+    state.receipts.forEach(r => {
+      if (!r.imageDataURL && photos[r.id]) r.imageDataURL = photos[r.id];
+      if (photos[r.id]) _photoSaved.add(r.id);
+    });
+    persist();
+  } catch (_) { _idbOk = false; }
+}
+
 function persist() {
-  try { localStorage.setItem('slippy_receipts', JSON.stringify(state.receipts)); } catch(_) {}
+  const slim = _idbOk
+    ? state.receipts.map(r => { if (!r.imageDataURL) return r; const { imageDataURL, ...rest } = r; return rest; })
+    : state.receipts;
+  try { localStorage.setItem('slippy_receipts', JSON.stringify(slim)); }
+  catch (_) { toast(t('toast.storage_full')); return false; }
+  syncPhotos();
+  return true;
 }
 function persistTips() {
   try { localStorage.setItem('slippy_tips', JSON.stringify(state.aiTips)); } catch(_) {}
@@ -83,8 +156,8 @@ function loadStorage() {
     state.learned = {}; state.aiTips = {}; state.monthlyAnalysis = {};
   }
 }
-function saveSettings() { localStorage.setItem('slippy_settings', JSON.stringify(state.settings)); }
-function saveLearned()  { localStorage.setItem('slippy_learned',  JSON.stringify(state.learned));  }
+function saveSettings() { try { localStorage.setItem('slippy_settings', JSON.stringify(state.settings)); } catch(_) { toast(t('toast.storage_full')); } }
+function saveLearned()  { try { localStorage.setItem('slippy_learned', JSON.stringify(state.learned)); } catch(_) {} }
 
 // ── HELPERS ───────────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
@@ -336,7 +409,7 @@ async function fetchMonthlyAnalysis(monthKey) {
         'anthropic-dangerous-direct-browser-access':'true',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: MODELS.claudeAnalysis,
         max_tokens: 200,
         messages: [{ role:'user', content: prompt }],
       }),
@@ -475,6 +548,11 @@ const LANG = {
     'btn.show':'Mostra','btn.hide':'Nascondi','btn.remove_key':'Rimuovi Chiave',
     'btn.save_budget':'Salva Budget','btn.prev_month':'Mese precedente','btn.next_month':'Mese successivo',
     'misc.streak_days':'gg',
+    'toast.storage_full':'Memoria piena: impossibile salvare. Esporta un backup e libera spazio.',
+    'set.backup':'Backup completo (JSON)','set.restore_backup':'Ripristina backup',
+    'toast.backup_ok':'Backup scaricato','toast.backup_invalid':'File di backup non valido',
+    'toast.backup_restored':'{n} scontrini ripristinati','toast.backup_none':'Nessun nuovo scontrino nel backup',
+    'set.privacy':'Informativa sulla privacy','set.backup_note':'Il backup include le foto ma non le chiavi API.',
     'toast.saved':'Scontrino salvato!','toast.deleted':'Scontrino eliminato',
     'toast.updated':'Scontrino aggiornato',
     'toast.duplicated':'Scontrino duplicato — aggiorna data e importo se necessario',
@@ -576,6 +654,11 @@ const LANG = {
     'btn.show':'Show','btn.hide':'Hide','btn.remove_key':'Remove Key',
     'btn.save_budget':'Save Budget','btn.prev_month':'Previous month','btn.next_month':'Next month',
     'misc.streak_days':'d',
+    'toast.storage_full':'Storage full: could not save. Export a backup and free up space.',
+    'set.backup':'Full backup (JSON)','set.restore_backup':'Restore backup',
+    'toast.backup_ok':'Backup downloaded','toast.backup_invalid':'Invalid backup file',
+    'toast.backup_restored':'{n} receipts restored','toast.backup_none':'No new receipts in backup',
+    'set.privacy':'Privacy policy','set.backup_note':'Backup includes photos but not API keys.',
     'toast.saved':'Receipt saved!','toast.deleted':'Receipt deleted',
     'toast.updated':'Receipt updated',
     'toast.duplicated':'Receipt duplicated — update date and amount if needed',
@@ -717,7 +800,12 @@ function fileToDataURL(file) {
 }
 
 // ── ITEM ROW HELPER ───────────────────────────────────────────
-function addItemRow() {
+function itemRowHTML(i, name, price) {
+  return `
+    <input class="finp" style="text-align:left;flex:1" placeholder="${t('form.product_ph')}" id="itn${i}" value="${esc(name || '')}"/>
+    <input class="finp" style="width:72px;text-align:right" type="number" step="0.01" placeholder="0.00" id="ita${i}" inputmode="decimal" value="${price != null && !isNaN(price) ? Number(price).toFixed(2) : ''}"/>`;
+}
+function addItemRow(name, price) {
   const container = document.getElementById('items-rows');
   if (!container) return;
   let i = 0;
@@ -725,11 +813,21 @@ function addItemRow() {
   const row = document.createElement('div');
   row.className = 'frow';
   row.style.gap = '8px';
-  row.innerHTML = `
-    <input class="finp" style="text-align:left;flex:1" placeholder="${t('form.product_ph')}" id="itn${i}" autofocus/>
-    <input class="finp" style="width:72px;text-align:right" type="number" step="0.01" placeholder="0.00" id="ita${i}" inputmode="decimal"/>`;
+  row.innerHTML = itemRowHTML(i, name, price);
   container.appendChild(row);
-  row.querySelector('input').focus();
+  if (name === undefined) row.querySelector('input').focus();
+}
+function readItemRows() {
+  const items = [];
+  let i = 0;
+  while (document.getElementById('itn' + i)) {
+    const n = (document.getElementById('itn' + i).value || '').trim();
+    const aVal = (document.getElementById('ita' + i).value || '').trim();
+    const a = aVal === '' ? undefined : (parseFloat(aVal) || 0);
+    if (n) items.push({ name: n, price: a });
+    i++;
+  }
+  return items;
 }
 
 // ── DUPLICATE DETECTION ───────────────────────────────────────
@@ -850,15 +948,7 @@ function saveManualEntry() {
 }
 
 function _doSaveManual(name, total, date, catId, note) {
-  const items = [];
-  let i = 0;
-  while (document.getElementById('itn' + i)) {
-    const n = (document.getElementById('itn' + i).value || '').trim();
-    const aVal = (document.getElementById('ita' + i).value || '').trim();
-    const a = aVal === '' ? undefined : (parseFloat(aVal) || 0);
-    if (n) items.push({ name: n, price: a });
-    i++;
-  }
+  const items = readItemRows();
   const receipt = {
     id: uid(), storeName: name, totalAmount: total,
     date, createdAt: new Date().toISOString(),
@@ -868,7 +958,7 @@ function _doSaveManual(name, total, date, catId, note) {
   };
   state.pendingPhoto = null;
   state.receipts.unshift(receipt);
-  persist();
+  if (!persist()) { state.receipts.shift(); return; }
   if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
   haptic('medium');
   closeOverlay('oscanner');
@@ -942,7 +1032,7 @@ async function analyzeWithAI() {
     const mime   = state.pendingPhoto.split(';')[0].split(':')[1];
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODELS.gemini}:generateContent?key=${encodeURIComponent(key)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -980,15 +1070,7 @@ async function analyzeWithAI() {
       const container = document.getElementById('items-rows');
       if (container) {
         container.innerHTML = '';
-        data.items.forEach((it, i) => {
-          const row = document.createElement('div');
-          row.className = 'frow';
-          row.style.gap = '8px';
-          row.innerHTML = `
-            <input class="finp" style="text-align:left;flex:1" placeholder="${t('form.product_ph')}" id="itn${i}" value="${esc(it.name || '')}"/>
-            <input class="finp" style="width:72px;text-align:right" type="number" step="0.01" placeholder="0.00" id="ita${i}" inputmode="decimal" value="${it.price != null ? Number(it.price).toFixed(2) : ''}"/>`;
-          container.appendChild(row);
-        });
+        data.items.forEach(it => addItemRow(it.name || '', it.price));
       }
     }
 
@@ -1187,6 +1269,13 @@ function showEditForm(id) {
       </div>
     </div>
     <div class="fsec">
+      <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${t('form.products')}</span>
+        <button type="button" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:0" onclick="addItemRow()">${t('form.add_item')}</button>
+      </div>
+      <div id="items-rows">${(r.items || []).map((it, i) => `<div class="frow" style="gap:8px">${itemRowHTML(i, it.name, it.price ?? it.amount)}</div>`).join('')}</div>
+    </div>
+    <div class="fsec">
       <div class="fhdr">${t('form.notes')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="enote"
@@ -1214,9 +1303,10 @@ function saveReceiptEdit(id) {
   if (dt) r.date = dt;
   const cat = document.getElementById('ec')?.value;
   if (cat) { r.category = cat; state.learned[(r.storeName||'').toLowerCase()] = cat; saveLearned(); }
+  if (document.getElementById('items-rows')) r.items = readItemRows();
   const noteVal = (document.getElementById('enote')?.value || '').trim();
   r.note = noteVal || undefined;
-  persist();
+  if (!persist()) return;
   haptic('medium');
   toast(t('toast.updated'));
   openDetail(id);
@@ -1987,7 +2077,7 @@ function renderSettings() {
       <span class="slbl">${t('set.budget_lbl', {sym: currSym()})}</span>
       <input class="kinp" id="budgetInp" type="number" min="0" step="10"
         placeholder="0" value="${budget > 0 ? budget : ''}"
-        style="text-align:right;font-size:15px;font-family:inherit;color:var(--accent);max-width:90px"/>
+        style="text-align:right;font-size:16px;font-family:inherit;color:var(--accent);max-width:90px"/>
     </div>
     <div class="snote">${t('set.budget_note')}</div>
     <button class="btn btn-p" style="margin-top:8px" onclick="saveBudget()">${t('btn.save_budget')}</button>
@@ -2040,14 +2130,28 @@ function renderSettings() {
       <span class="slbl">${t('set.template')}</span>
     </div>
     <input type="file" id="csv-import-inp" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(this)"/>
+    <div class="srow si-row" style="${count ? 'cursor:pointer' : ''}" onclick="${count ? 'exportBackup()' : ''}">
+      <div class="si-ico" style="background:#FF950022">💾</div>
+      <span class="slbl" style="${!count ? 'color:var(--lbl3)' : ''}">${t('set.backup')}</span>
+    </div>
+    <div class="srow si-row" style="cursor:pointer" onclick="document.getElementById('backup-import-inp').click()">
+      <div class="si-ico" style="background:#34C75922">♻️</div>
+      <span class="slbl">${t('set.restore_backup')}</span>
+    </div>
+    <input type="file" id="backup-import-inp" accept=".json,application/json" style="display:none" onchange="importBackup(this)"/>
     <div class="srow si-row" style="${count ? 'cursor:pointer' : ''}" onclick="${count ? 'clearAllData()' : ''}">
       <div class="si-ico" style="background:#FF3B3022">🗑️</div>
       <span class="slbl" style="${!count ? 'color:var(--lbl3)' : 'color:var(--red)'}">${t('set.delete_all')}</span>
     </div>
-    <div class="snote">${t('set.data_note')}</div>
+    <div class="snote">${t('set.data_note')} ${t('set.backup_note')}</div>
   </div>
   <div class="ssel">
     <div class="sshdr">${t('set.info')}</div>
+    <a class="srow si-row" href="privacy.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+      <div class="si-ico" style="background:#007AFF22">🔒</div>
+      <span class="slbl">${t('set.privacy')}</span>
+      <span class="sval">›</span>
+    </a>
     <div class="srow si-row">
       <div class="si-ico" style="background:#5E5CE622">✦</div>
       <span class="slbl">${t('set.version')}</span>
@@ -2056,7 +2160,7 @@ function renderSettings() {
     <div class="srow si-row">
       <div class="si-ico" style="background:#FF950022">🤖</div>
       <span class="slbl">${t('set.ai_engine')}</span>
-      <span class="sval">Gemini 2.0 Flash</span>
+      <span class="sval">Gemini 2.5 Flash</span>
     </div>
   </div>
   <div class="settings-brand">
@@ -2114,6 +2218,40 @@ function saveGeminiKey() {
   saveSettings();
   toast(v ? t('toast.gemini_saved') : t('toast.gemini_removed'));
   renderSettings();
+}
+function exportBackup() {
+  const { apiKey, geminiKey, ...safeSettings } = state.settings;
+  const data = { app: 'slippy', version: 1, exportedAt: new Date().toISOString(),
+    receipts: state.receipts, settings: safeSettings, learned: state.learned };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `slippy-backup-${localDateStr()}.json`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast(t('toast.backup_ok'));
+}
+function importBackup(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data?.app !== 'slippy' || !Array.isArray(data.receipts)) throw new Error('bad');
+      const existing = new Set(state.receipts.map(r => r.id));
+      const fresh = data.receipts.filter(r => r && r.id && !existing.has(r.id) && r.totalAmount > 0);
+      if (!fresh.length) { toast(t('toast.backup_none')); return; }
+      state.receipts.push(...fresh);
+      if (data.learned && typeof data.learned === 'object') state.learned = { ...data.learned, ...state.learned };
+      saveLearned();
+      persist();
+      renderDashboard(); renderReceipts(); renderSettings();
+      toast(t('toast.backup_restored', { n: fresh.length }));
+    } catch (_) { toast(t('toast.backup_invalid')); }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 function csvQ(s) { return `"${String(s || '').replace(/"/g, '""')}"`; }
 function downloadCSVBlob(content, filename) {
@@ -2292,7 +2430,7 @@ async function fetchTip(receiptId) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: MODELS.claudeTip,
         max_tokens: 120,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -2386,6 +2524,12 @@ function init() {
   document.documentElement.lang = (state.settings.lang || 'it') === 'en' ? 'en' : 'it';
 
   renderDashboard();
+
+  if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+  loadPhotos().then(() => {
+    renderDashboard();
+    if (state.tab === 'r') renderReceipts();
+  });
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
