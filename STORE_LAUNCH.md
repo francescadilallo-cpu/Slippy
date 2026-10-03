@@ -19,10 +19,10 @@
    (data not collected; AI features send data to the user's chosen provider).
 7. Test on a real iPhone: camera, offline, storage persistence, dark mode, Dynamic Type.
 
-## AI keys (biggest product gap)
-Users currently paste their own Claude/Gemini keys. For a paid consumer app, add a small backend
-(e.g. Cloudflare Worker) that holds the keys, authenticates via App Store receipt / StoreKit, rate-limits, and proxies
-`/tip`, `/analysis`, `/ocr`. Then remove the key fields from Settings.
-
-## Pricing options
-One-time purchase or subscription with AI included via the backend. Free tier without AI is viable since all other features work offline.
+## Free launch (chosen path)
+- No backend, payments or StoreKit needed. AI stays optional: users add their own Claude/Gemini key; everything else works offline with no account.
+- Cheapest first step: ship as a PWA (free, no fees). iPhone: Safari > Share > Add to Home Screen. Android: Install app.
+- App Store: still needs the Apple Developer account ($99/yr) even for a free app. Google Play is a one-time $25.
+- Store review risk is the same for free apps: add native features (step 5) so it is not just a wrapped website.
+- If you want donations later: Apple requires in-app tips to use In-App Purchase; external donation links are only allowed for registered non-profits. Simplest is a link on the website or GitHub page, not inside the iOS app.
+- Revisit the backend + paid AI only if users ask for AI without their own key.
