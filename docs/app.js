@@ -50,7 +50,7 @@ const state = {
   receipts: [],
   settings: { apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it' },
   learned: {},
-  ocrData: null,
+
   pendingPhoto: null,
   detailId: null,
   searchQ: '',
@@ -412,7 +412,6 @@ function closeOverlay(id) {
   el.classList.remove('on');
   setTimeout(() => {
     el.innerHTML = '';
-    if (id === 'oscanner') state.ocrData = null;
   }, 300);
 }
 
