@@ -420,7 +420,7 @@ function closeOverlay(id) {
   if (!el) return;
   el.classList.remove('on');
   setTimeout(() => {
-    el.innerHTML = '';
+    if (!el.classList.contains('on')) el.innerHTML = '';
   }, 300);
 }
 
