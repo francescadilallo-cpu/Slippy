@@ -98,7 +98,7 @@ function fmt(n) {
 function uiLocale() { return (state?.settings?.lang || 'it') === 'en' ? 'en-GB' : 'it-IT'; }
 function fmtDate(iso) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString(uiLocale(), { day:'2-digit', month:'short', year:'numeric' });
+  return parseDate(iso).toLocaleDateString(uiLocale(), { day:'2-digit', month:'short', year:'numeric' });
 }
 function monthLabel(d) { return d.toLocaleDateString(uiLocale(), { month:'long', year:'numeric' }); }
 function isFutureMonth(d) {
@@ -107,6 +107,15 @@ function isFutureMonth(d) {
     (d.getFullYear() === now.getFullYear() && d.getMonth() > now.getMonth());
 }
 function sameMonth(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth(); }
+function localDateStr(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseDate(s) {
+  if (!s) return new Date(NaN);
+  if (s.length > 10) return new Date(s);
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
 function catById(id) { return CATS.find(c => c.id === id) || CATS[CATS.length - 1]; }
 function esc(s) {
   return String(s == null ? '' : s)
@@ -126,7 +135,7 @@ function groupByDate(receipts) {
   const groups = Object.create(null);
   const order  = [];
   receipts.forEach(r => {
-    const d = new Date(r.date || r.createdAt);
+    const d = parseDate(r.date || r.createdAt);
     let g;
     if      (d.toDateString() === todayStr)     g = t('date.today');
     else if (d.toDateString() === yesterdayStr) g = t('date.yesterday');
@@ -216,7 +225,7 @@ async function shareReceipt(id) {
 async function shareMonthSummary(moKey) {
   const [year, month] = moKey.split('-').map(Number);
   const mo = new Date(year, month, 1);
-  const rx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), mo));
+  const rx = state.receipts.filter(r => sameMonth(parseDate(r.date || r.createdAt), mo));
   if (!rx.length) { toast(t('misc.no_data_month')); return; }
   const total = rx.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const catTotals = {};
@@ -280,12 +289,12 @@ function renderForecastSection(thisRx, mo) {
 function calcStreak() {
   if (!state.receipts.length) return 0;
   const days = new Set(state.receipts.map(r =>
-    r.date || new Date(r.createdAt).toISOString().split('T')[0]
+    r.date || localDateStr(new Date(r.createdAt))
   ));
   let streak = 0;
   const d = new Date();
   while (true) {
-    const ds = d.toISOString().split('T')[0];
+    const ds = localDateStr(d);
     if (days.has(ds)) { streak++; d.setDate(d.getDate() - 1); }
     else break;
   }
@@ -306,7 +315,7 @@ async function fetchMonthlyAnalysis(monthKey) {
   try {
     const [y, m] = monthKey.split('-').map(Number);
     const mo = new Date(y, m, 1);
-    const rx = state.receipts.filter(r => sameMonth(new Date(r.date||r.createdAt), mo));
+    const rx = state.receipts.filter(r => sameMonth(parseDate(r.date||r.createdAt), mo));
     const total = rx.reduce((s, r) => s + (r.totalAmount||0), 0);
     const catMap = {};
     rx.forEach(r => { catMap[r.category] = (catMap[r.category]||0) + (r.totalAmount||0); });
@@ -465,6 +474,7 @@ const LANG = {
     'btn.regenerate':'↺ Rigenera','btn.retry':'Riprova','btn.get_advice':'Ottieni consiglio',
     'btn.show':'Mostra','btn.hide':'Nascondi','btn.remove_key':'Rimuovi Chiave',
     'btn.save_budget':'Salva Budget','btn.prev_month':'Mese precedente','btn.next_month':'Mese successivo',
+    'misc.streak_days':'gg',
     'toast.saved':'Scontrino salvato!','toast.deleted':'Scontrino eliminato',
     'toast.updated':'Scontrino aggiornato',
     'toast.duplicated':'Scontrino duplicato — aggiorna data e importo se necessario',
@@ -564,6 +574,7 @@ const LANG = {
     'btn.regenerate':'↺ Regenerate','btn.retry':'Retry','btn.get_advice':'Get advice',
     'btn.show':'Show','btn.hide':'Hide','btn.remove_key':'Remove Key',
     'btn.save_budget':'Save Budget','btn.prev_month':'Previous month','btn.next_month':'Next month',
+    'misc.streak_days':'d',
     'toast.saved':'Receipt saved!','toast.deleted':'Receipt deleted',
     'toast.updated':'Receipt updated',
     'toast.duplicated':'Receipt duplicated — update date and amount if needed',
@@ -722,7 +733,7 @@ function isDuplicate(name, total) {
 function openManualEntry() {
   haptic('light');
   state.pendingPhoto = null;
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const catsOpt = CATS.map(c =>
     `<option value="${c.id}" ${c.id === 'groceries' ? 'selected' : ''}>${c.icon} ${catName(c)}</option>`
   ).join('');
@@ -807,7 +818,7 @@ function setQuickAmt(id, val) {
 function saveManualEntry() {
   const name  = (document.getElementById('mn')?.value || '').trim() || t('misc.store');
   const total = parseFloat(document.getElementById('mt')?.value || '0') || 0;
-  const date  = document.getElementById('md')?.value || new Date().toISOString().split('T')[0];
+  const date  = document.getElementById('md')?.value || localDateStr();
   const catId = document.getElementById('mc')?.value || 'other';
   const note  = (document.getElementById('mnote')?.value || '').trim();
 
@@ -1072,8 +1083,8 @@ function renderWeekSection(allRx) {
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - dow); weekStart.setHours(0,0,0,0);
   const lastWeekStart = new Date(weekStart); lastWeekStart.setDate(weekStart.getDate() - 7);
 
-  const thisW = allRx.filter(r => new Date(r.date || r.createdAt) >= weekStart);
-  const lastW = allRx.filter(r => { const d = new Date(r.date||r.createdAt); return d >= lastWeekStart && d < weekStart; });
+  const thisW = allRx.filter(r => parseDate(r.date || r.createdAt) >= weekStart);
+  const lastW = allRx.filter(r => { const d = parseDate(r.date||r.createdAt); return d >= lastWeekStart && d < weekStart; });
   if (!thisW.length) return '';
 
   const thisT = thisW.reduce((s,r)=>s+(r.totalAmount||0),0);
@@ -1085,7 +1096,7 @@ function renderWeekSection(allRx) {
   const dayLabels = t('days.short').split(',');
   const dayTotals = new Array(7).fill(0);
   thisW.forEach(r => {
-    const d = new Date(r.date || r.createdAt);
+    const d = parseDate(r.date || r.createdAt);
     const idx = d.getDay() === 0 ? 6 : d.getDay() - 1;
     dayTotals[idx] += r.totalAmount || 0;
   });
@@ -1200,7 +1211,7 @@ function saveReceiptEdit(id) {
 function duplicateReceipt(id) {
   const r = state.receipts.find(x => x.id === id);
   if (!r) return;
-  const copy = { ...r, id: uid(), date: new Date().toISOString().split('T')[0], createdAt: new Date().toISOString() };
+  const copy = { ...r, id: uid(), date: localDateStr(), createdAt: new Date().toISOString() };
   delete copy.imageDataURL;
   delete copy.rawText;
   state.receipts.unshift(copy);
@@ -1219,7 +1230,7 @@ function getMonthlyTotals(n) {
   const result = [];
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const rx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), d));
+    const rx = state.receipts.filter(r => sameMonth(parseDate(r.date || r.createdAt), d));
     const total = rx.reduce((s, r) => s + (r.totalAmount || 0), 0);
     const label = d.toLocaleDateString(uiLocale(), { month:'short' }).replace('.', '');
     result.push({ label, total, isCurrent: i === 0 });
@@ -1331,7 +1342,7 @@ function renderCalendarSection(thisRx, mo) {
   // Build daily totals map
   const dayMap = {};
   thisRx.forEach(r => {
-    const d = new Date(r.date || r.createdAt).getDate();
+    const d = parseDate(r.date || r.createdAt).getDate();
     dayMap[d] = (dayMap[d] || 0) + (r.totalAmount || 0);
   });
   const maxDay = Math.max(...Object.values(dayMap), 1);
@@ -1432,7 +1443,7 @@ function renderSparkSection(data) {
   const hasData = data.some(d => d.total > 0);
   if (!hasData) return '';
   const year = new Date().getFullYear();
-  const yearRx = state.receipts.filter(r => new Date(r.date||r.createdAt).getFullYear() === year);
+  const yearRx = state.receipts.filter(r => parseDate(r.date||r.createdAt).getFullYear() === year);
   const yearTotal = yearRx.reduce((s,r)=>s+(r.totalAmount||0),0);
   return `
   <div class="card spark-wrap">
@@ -1448,14 +1459,14 @@ function renderSparkSection(data) {
 function renderYearlySection() {
   const now = new Date();
   const year = now.getFullYear();
-  const yearRx = state.receipts.filter(r => new Date(r.date||r.createdAt).getFullYear() === year);
+  const yearRx = state.receipts.filter(r => parseDate(r.date||r.createdAt).getFullYear() === year);
   if (yearRx.length < 6) return '';
 
   const yearTotal = yearRx.reduce((s,r)=>s+(r.totalAmount||0),0);
 
   const monthMap = {};
   yearRx.forEach(r => {
-    const m = new Date(r.date||r.createdAt).getMonth();
+    const m = parseDate(r.date||r.createdAt).getMonth();
     monthMap[m] = (monthMap[m]||0) + (r.totalAmount||0);
   });
   const monthCount = Object.keys(monthMap).length;
@@ -1508,8 +1519,8 @@ function renderDashboard() {
   const mo = state.dashMonth;
   const prevMo = new Date(mo.getFullYear(), mo.getMonth() - 1, 1);
 
-  const thisRx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), mo));
-  const prevRx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), prevMo));
+  const thisRx = state.receipts.filter(r => sameMonth(parseDate(r.date || r.createdAt), mo));
+  const prevRx = state.receipts.filter(r => sameMonth(parseDate(r.date || r.createdAt), prevMo));
 
   const total     = thisRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const prevTotal = prevRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
@@ -1620,7 +1631,7 @@ function renderDashboard() {
       <div class="brand-ico-wrap"><span class="brand-ico">S</span></div>
       <span class="brand-name">slippy</span>
     </div>
-    ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}${state.settings.lang === 'en' ? 'd' : 'gg'}</span>` : ''}
+    ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}${t('misc.streak_days')}</span>` : ''}
   </div>
   ${state.receipts.length > 0 ? `<div class="card spend-card">
     <div class="spend-mrow">
@@ -1776,7 +1787,7 @@ function renderReceipts(q) {
   }
 
   const thisMonthRx = state.receipts.filter(r => {
-    const d = new Date(r.date || r.createdAt);
+    const d = parseDate(r.date || r.createdAt);
     const now = new Date();
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   });
@@ -2119,7 +2130,7 @@ function exportCSV() {
 }
 function downloadTemplate() {
   const header = ['ID','Store','Total','Currency','Date','Category','Items','Notes'];
-  const example = ['', csvQ('Esselunga'), '47.30', 'EUR', new Date().toISOString().split('T')[0], 'groceries', csvQ('Pasta:2.50; Latte:1.20'), csvQ('')];
+  const example = ['', csvQ('Esselunga'), '47.30', 'EUR', localDateStr(), 'groceries', csvQ('Pasta:2.50; Latte:1.20'), csvQ('')];
   const content = [header.join(','), example.join(',')].join('\n');
   downloadCSVBlob(content, 'slippy-template.csv');
   toast(t('toast.template_downloaded'));
@@ -2160,8 +2171,7 @@ function handleCSVImport(input) {
         if (existing.has(id)) return;
         const store = cols[storeIdx] || t('misc.store');
         const total = parseFloat((cols[totalIdx] || '0').replace(',', '.')) || 0;
-        const today = new Date().toISOString().split('T')[0];
-        const date  = dateIdx >= 0 && cols[dateIdx] ? cols[dateIdx] : today;
+        const date  = dateIdx >= 0 && cols[dateIdx] ? cols[dateIdx] : localDateStr();
         const rawCat = catIdx >= 0 ? (cols[catIdx] || '').toLowerCase().trim() : '';
         const category = validCatIds.has(rawCat) ? rawCat : 'other';
         const itemsRaw = itemsIdx >= 0 ? (cols[itemsIdx] || '') : '';
