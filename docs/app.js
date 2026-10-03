@@ -2241,9 +2241,10 @@ function parseCSVRow(line) {
   let cur = '', inQ = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === '"') { inQ = !inQ; continue; }
-    if (ch === ',' && !inQ) { cols.push(cur); cur = ''; continue; }
-    cur += ch;
+    if (inQ && ch === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+    else if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+    else { cur += ch; }
   }
   cols.push(cur);
   return cols;
