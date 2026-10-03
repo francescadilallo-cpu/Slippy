@@ -646,6 +646,7 @@ function catName(cat) { return (state?.settings?.lang || 'it') === 'en' ? (cat.n
 function changeLang(lang) {
   state.settings.lang = lang;
   saveSettings();
+  document.documentElement.lang = lang === 'en' ? 'en' : 'it';
   const r = document.getElementById('tab-lbl-r');
   const s = document.getElementById('tab-lbl-s');
   if (r) r.textContent = t('tab.receipts');
@@ -1108,14 +1109,14 @@ function renderWeekSection(allRx) {
   const maxDay = Math.max(...dayTotals, 1);
   const todayIdx = now.getDay() === 0 ? 6 : now.getDay() - 1;
 
-  const dayBars = dayTotals.map((t, i) => {
-    const pct = Math.max(6, Math.round(t / maxDay * 100));
+  const dayBars = dayTotals.map((amt, i) => {
+    const pct = Math.max(6, Math.round(amt / maxDay * 100));
     const isToday = i === todayIdx;
     const isPast  = i <= todayIdx;
-    const bg = isToday ? 'var(--accent)' : (isPast && t > 0) ? 'var(--accent-end)' : 'var(--fill2)';
+    const bg = isToday ? 'var(--accent)' : (isPast && amt > 0) ? 'var(--accent-end)' : 'var(--fill2)';
     return `<div class="wd-col">
       <div class="wd-bar-wrap">
-        <div class="wd-bar" style="height:${t > 0 ? pct : 6}%;background:${bg};opacity:${!isPast && t === 0 ? .35 : 1}"></div>
+        <div class="wd-bar" style="height:${amt > 0 ? pct : 6}%;background:${bg};opacity:${!isPast && amt === 0 ? .35 : 1}"></div>
       </div>
       <div class="wd-lbl" style="${isToday ? 'color:var(--accent);font-weight:700' : ''}">${dayLabels[i]}</div>
     </div>`;
@@ -1418,7 +1419,7 @@ function renderBudgetSection(spent, budget) {
   const offset = (circ / 4).toFixed(2);
   const remainText = overBudget
     ? `<span style="color:var(--red);font-weight:700">${t('misc.over_budget')}</span>`
-    : `${fmt(remaining)} ${t('misc.remaining').replace('{amount} ','')}`;
+    : t('misc.remaining', { amount: fmt(remaining) });
 
   return `
   <div class="card budget-wrap">
@@ -1491,7 +1492,7 @@ function renderYearlySection() {
   const avgMonthly = yearTotal / monthCount;
   const [worstM, worstAmt] = Object.entries(monthMap).sort((a,b)=>b[1]-a[1])[0];
   const worstName = new Date(year, +worstM, 1)
-    .toLocaleDateString(state.settings.lang === 'en' ? 'en-GB' : 'it-IT',{month:'long'});
+    .toLocaleDateString(uiLocale(),{month:'long'});
   const worstNameCap = worstName[0].toUpperCase() + worstName.slice(1);
 
   const catMap = {};
@@ -2371,6 +2372,7 @@ function init() {
   if (_s) _s.textContent = t('tab.settings');
   const _fab = document.getElementById('fab');
   if (_fab) _fab.setAttribute('aria-label', t('aria.fab'));
+  document.documentElement.lang = (state.settings.lang || 'it') === 'en' ? 'en' : 'it';
 
   renderDashboard();
 
