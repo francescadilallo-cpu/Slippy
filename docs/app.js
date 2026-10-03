@@ -838,7 +838,7 @@ function saveManualEntry() {
   const catId = document.getElementById('mc')?.value || 'other';
   const note  = (document.getElementById('mnote')?.value || '').trim();
 
-  if (!total) { toast(t('toast.enter_total')); return; }
+  if (!(total > 0)) { toast(t('toast.enter_total')); return; }
 
   if (isDuplicate(name, total)) {
     confirmSheet(t('confirm.duplicate'), t('btn.save_anyway'), () => {
@@ -1209,7 +1209,7 @@ function saveReceiptEdit(id) {
   const name = (document.getElementById('en')?.value||'').trim();
   if (name) r.storeName = name;
   const tot = parseFloat(document.getElementById('et')?.value||'');
-  if (!isNaN(tot)) r.totalAmount = tot;
+  if (!isNaN(tot) && tot > 0) r.totalAmount = tot;
   const dt = document.getElementById('ed')?.value;
   if (dt) r.date = dt;
   const cat = document.getElementById('ec')?.value;
@@ -2068,7 +2068,7 @@ function renderSettings() {
 }
 
 function saveBudget() {
-  const v = parseFloat(document.getElementById('budgetInp')?.value || '0') || 0;
+  const v = Math.max(0, parseFloat(document.getElementById('budgetInp')?.value || '0') || 0);
   state.settings.budget = v;
   saveSettings();
   haptic('medium');
