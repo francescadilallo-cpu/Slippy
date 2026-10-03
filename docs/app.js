@@ -1763,7 +1763,7 @@ function renderDashboard() {
     ${!state.settings.apiKey ? `<p class="welcome-hint">${t('welcome.ai_hint')}</p>` : ''}
   </div>` : '';
 
-  const weekSection    = renderWeekSection(state.receipts);
+  const weekSection    = sameMonth(mo, new Date()) ? renderWeekSection(state.receipts) : '';
   const budgetSection  = renderBudgetSection(total, state.settings.budget || 0);
   const insights       = calcInsights(thisRx, prevRx, mo);
   const insightSection = renderInsightsSection(insights);
