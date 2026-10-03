@@ -86,11 +86,12 @@ function fmt(n) {
   const sym = cur?.symbol || code;
   return sym + '\u00A0' + Number(n || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
+function uiLocale() { return (state?.settings?.lang || 'it') === 'en' ? 'en-GB' : 'it-IT'; }
 function fmtDate(iso) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
+  return new Date(iso).toLocaleDateString(uiLocale(), { day:'2-digit', month:'short', year:'numeric' });
 }
-function monthLabel(d) { return d.toLocaleDateString(state.settings.lang === 'en' ? 'en-GB' : 'it-IT', { month:'long', year:'numeric' }); }
+function monthLabel(d) { return d.toLocaleDateString(uiLocale(), { month:'long', year:'numeric' }); }
 function isFutureMonth(d) {
   const now = new Date();
   return d.getFullYear() > now.getFullYear() ||
@@ -123,7 +124,7 @@ function groupByDate(receipts) {
     else if (now - d < 7 * 86400000)            g = t('date.this_week');
     else if (sameMonth(d, now))                 g = t('date.this_month');
     else {
-      g = d.toLocaleDateString('it-IT', { month:'long', year:'numeric' });
+      g = d.toLocaleDateString(uiLocale(), { month:'long', year:'numeric' });
       g = g[0].toUpperCase() + g.slice(1);
     }
     if (!groups[g]) { groups[g] = []; order.push(g); }
@@ -525,6 +526,7 @@ const LANG = {
     'misc.budget_set':'Budget impostato: {amount}/mese','misc.budget_removed':'Budget rimosso',
     'misc.currency_changed':'Valuta: {sym} {code}','misc.receipt_count':'{n} scontrin{s}',
     'misc.import_ok':'{n} scontrin{s} importat{s}!',
+    'days.short':'L,M,M,G,V,S,D',
   },
   en: {
     'tab.receipts':'Receipts','tab.settings':'Settings',
@@ -614,6 +616,7 @@ const LANG = {
     'misc.budget_set':'Budget set: {amount}/month','misc.budget_removed':'Budget removed',
     'misc.currency_changed':'Currency: {sym} {code}','misc.receipt_count':'{n} receipt{s}',
     'misc.import_ok':'{n} receipt{s} imported!',
+    'days.short':'M,T,W,T,F,S,S',
   },
 };
 function t(key, vars = {}) {
@@ -1074,7 +1077,7 @@ function renderWeekSection(allRx) {
   const dc    = diff !== null ? (diff > 0 ? 'var(--red)' : 'var(--green)') : '';
 
   // Daily bar chart Mon–Sun
-  const dayLabels = ['L','M','M','G','V','S','D'];
+  const dayLabels = t('days.short').split(',');
   const dayTotals = new Array(7).fill(0);
   thisW.forEach(r => {
     const d = new Date(r.date || r.createdAt);
@@ -1213,7 +1216,7 @@ function getMonthlyTotals(n) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const rx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), d));
     const total = rx.reduce((s, r) => s + (r.totalAmount || 0), 0);
-    const label = d.toLocaleDateString('it-IT', { month:'short' }).replace('.', '');
+    const label = d.toLocaleDateString(uiLocale(), { month:'short' }).replace('.', '');
     result.push({ label, total, isCurrent: i === 0 });
   }
   return result;
@@ -1343,7 +1346,7 @@ function renderCalendarSection(thisRx, mo) {
   const firstDow = new Date(year, month, 1).getDay(); // 0=Sun
   const startOffset = firstDow === 0 ? 6 : firstDow - 1; // Mon=0
 
-  const dayNames = ['L','M','M','G','V','S','D'];
+  const dayNames = t('days.short').split(',');
   const header = dayNames.map(d => `<div class="cal-dname">${d}</div>`).join('');
 
   let cells = Array(startOffset).fill(`<div class="cal-cell cal-empty"></div>`);
