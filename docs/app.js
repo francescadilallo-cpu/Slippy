@@ -208,7 +208,7 @@ async function shareMonthSummary(moKey) {
   const [year, month] = moKey.split('-').map(Number);
   const mo = new Date(year, month, 1);
   const rx = state.receipts.filter(r => sameMonth(new Date(r.date || r.createdAt), mo));
-  if (!rx.length) return;
+  if (!rx.length) { toast(t('misc.no_data_month')); return; }
   const total = rx.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const catTotals = {};
   rx.forEach(r => { catTotals[r.category] = (catTotals[r.category] || 0) + (r.totalAmount || 0); });
@@ -332,7 +332,7 @@ async function fetchMonthlyAnalysis(monthKey) {
   } catch(err) {
     state.monthlyAnalysis[monthKey] = null;
     if (card) card.innerHTML = `
-      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Analisi Mensile AI</h3><span class="ai-badge">Claude</span></div>
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>${t('dash.ai_monthly')}</h3><span class="ai-badge">Claude</span></div>
       <p style="font-size:13px;color:var(--red);margin-bottom:8px">${esc(err.message)}</p>
       <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">${t('btn.retry')}</button>`;
   }
@@ -520,6 +520,7 @@ const LANG = {
     'welcome.cta':'Aggiungi il primo scontrino →',
     'welcome.ai_hint':'💡 Aggiungi una chiave API Claude nelle Impostazioni per sbloccare l\'analisi AI.',
     'misc.store':'Negozio','misc.over_budget':'Sopra budget','misc.over_budget_dot':'· sopra budget',
+    'aria.fab':'Aggiungi scontrino','aria.clear_search':'Cancella ricerca',
     'misc.remaining':'{amount} rimanenti','misc.next_days':'{amount} nei prossimi {n} giorni',
     'misc.restore':'Ripristina','misc.cal_legend':'= spesa','misc.visits_one':'visita','misc.visits_many':'visite',
     'misc.this_month':'{amount} questo mese','misc.results':'{n} risultat{s} · {amount}',
@@ -527,6 +528,12 @@ const LANG = {
     'misc.budget_set':'Budget impostato: {amount}/mese','misc.budget_removed':'Budget rimosso',
     'misc.currency_changed':'Valuta: {sym} {code}','misc.receipt_count':'{n} scontrin{s}',
     'misc.import_ok':'{n} scontrin{s} importat{s}!',
+    'misc.delete_all':'Elimina tutto',
+    'misc.of':' di ','misc.in_year':'nel {year}',
+    'misc.vs_more':'in più','misc.vs_less':'in meno',
+    'misc.spending_vs':'Stai spendendo {n}% {dir} rispetto al mese scorso',
+    'misc.cat_spending':'{cat} {n}% della spesa questo mese',
+    'misc.no_data_month':'Nessuna spesa in questo periodo',
     'days.short':'L,M,M,G,V,S,D',
   },
   en: {
@@ -611,6 +618,7 @@ const LANG = {
     'welcome.cta':'Add the first receipt →',
     'welcome.ai_hint':'💡 Add a Claude API key in Settings to unlock AI analysis.',
     'misc.store':'Store','misc.over_budget':'Over budget','misc.over_budget_dot':'· over budget',
+    'aria.fab':'Add receipt','aria.clear_search':'Clear search',
     'misc.remaining':'{amount} remaining','misc.next_days':'{amount} in the next {n} days',
     'misc.restore':'Restore','misc.cal_legend':'= spend','misc.visits_one':'visit','misc.visits_many':'visits',
     'misc.this_month':'{amount} this month','misc.results':'{n} result{s} · {amount}',
@@ -618,6 +626,12 @@ const LANG = {
     'misc.budget_set':'Budget set: {amount}/month','misc.budget_removed':'Budget removed',
     'misc.currency_changed':'Currency: {sym} {code}','misc.receipt_count':'{n} receipt{s}',
     'misc.import_ok':'{n} receipt{s} imported!',
+    'misc.delete_all':'Delete all',
+    'misc.of':' of ','misc.in_year':'in {year}',
+    'misc.vs_more':'more','misc.vs_less':'less',
+    'misc.spending_vs':'Spending {n}% {dir} vs last month',
+    'misc.cat_spending':'{cat} {n}% of spending this month',
+    'misc.no_data_month':'No spending in this period',
     'days.short':'M,T,W,T,F,S,S',
   },
 };
@@ -635,6 +649,8 @@ function changeLang(lang) {
   const s = document.getElementById('tab-lbl-s');
   if (r) r.textContent = t('tab.receipts');
   if (s) s.textContent = t('tab.settings');
+  const fab = document.getElementById('fab');
+  if (fab) fab.setAttribute('aria-label', t('aria.fab'));
   renderDashboard();
   renderReceipts();
   renderSettings();
@@ -762,7 +778,7 @@ function openManualEntry() {
         </div>
         <div id="photo-preview-wrap" style="display:none;position:relative;width:100%">
           <img id="photo-preview" src="" alt="" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;display:block"/>
-          <button onclick="event.stopPropagation();removePendingPhoto()" aria-label="Rimuovi foto" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+          <button onclick="event.stopPropagation();removePendingPhoto()" aria-label="${t('btn.remove_photo')}" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
         </div>
       </div>
     </div>
@@ -823,7 +839,7 @@ function setQuickAmt(id, val) {
 }
 
 function saveManualEntry() {
-  const name  = (document.getElementById('mn')?.value || '').trim() || 'Negozio';
+  const name  = (document.getElementById('mn')?.value || '').trim() || t('misc.store');
   const total = parseFloat(document.getElementById('mt')?.value || '0') || 0;
   const date  = document.getElementById('md')?.value || new Date().toISOString().split('T')[0];
   const catId = document.getElementById('mc')?.value || 'other';
@@ -832,7 +848,7 @@ function saveManualEntry() {
   if (!total) { toast(t('toast.enter_total')); return; }
 
   if (isDuplicate(name, total)) {
-    confirmSheet('Questo scontrino sembra un duplicato. Salvare comunque?', 'Salva Comunque', () => {
+    confirmSheet(t('confirm.duplicate'), t('btn.save_anyway'), () => {
       _doSaveManual(name, total, date, catId, note);
     }, false);
     return;
@@ -868,15 +884,15 @@ function _doSaveManual(name, total, date, catId, note) {
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────
-function gotoTab(t) {
+function gotoTab(tab) {
   haptic('light');
-  state.tab = t;
+  state.tab = tab;
   const ids = ['d', 'r', 's'];
-  ids.forEach(id => document.getElementById('v' + id).classList.toggle('on', id === t));
-  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('on', ids[i] === t));
-  if (t === 'd') renderDashboard();
-  if (t === 'r') renderReceipts();
-  if (t === 's') renderSettings();
+  ids.forEach(id => document.getElementById('v' + id).classList.toggle('on', id === tab));
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('on', ids[i] === tab));
+  if (tab === 'd') renderDashboard();
+  if (tab === 'r') renderReceipts();
+  if (tab === 's') renderSettings();
 }
 
 function openScanner() {
@@ -897,13 +913,13 @@ function openPhotoOptions() {
     <div class="scan-btns">
       <button class="btn btn-p" onclick="closeSheet();triggerCapture(true)">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Fotocamera
+        ${t('btn.camera')}
       </button>
       <button class="btn btn-s" onclick="closeSheet();triggerCapture(false)">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        Scegli dalla Libreria
+        ${t('btn.library')}
       </button>
-      ${state.pendingPhoto ? '<button class="btn btn-s" style="color:var(--red,#FF3B30)" onclick="closeSheet();removePendingPhoto()">Rimuovi foto</button>' : ''}
+      ${state.pendingPhoto ? `<button class="btn btn-s" style="color:var(--red,#FF3B30)" onclick="closeSheet();removePendingPhoto()">${t('btn.remove_photo')}</button>` : ''}
     </div>
   </div>`;
   openSheet(html);
@@ -952,7 +968,7 @@ async function analyzeWithAI() {
     const json = await res.json();
     const raw  = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const m    = raw.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('Risposta non valida');
+    if (!m) throw new Error(t('toast.invalid_response'));
     const data = JSON.parse(m[0]);
 
     const mn = document.getElementById('mn');
@@ -1120,7 +1136,7 @@ function showEditForm(id) {
   const r = state.receipts.find(x => x.id === id);
   if (!r) return;
   const catsOpt = CATS.map(c =>
-    `<option value="${c.id}" ${c.id === r.category ? 'selected' : ''}>${c.icon} ${c.name}</option>`
+    `<option value="${c.id}" ${c.id === r.category ? 'selected' : ''}>${c.icon} ${catName(c)}</option>`
   ).join('');
   const el = document.getElementById('odetail');
   el.scrollTop = 0;
@@ -1284,10 +1300,10 @@ function calcInsights(thisRx, prevRx, mo) {
   const prevTotal = prevRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
   if (prevTotal > 0 && thisTotal > 0) {
     const diff = ((thisTotal - prevTotal) / prevTotal * 100).toFixed(0);
-    const sign = diff > 0 ? 'in più' : 'in meno';
+    const dir = diff > 0 ? t('misc.vs_more') : t('misc.vs_less');
     const color = diff > 0 ? 'var(--red)' : 'var(--green)';
     const icon = diff > 0 ? '📈' : '📉';
-    insights.push({ color, icon, text: `Stai spendendo ${Math.abs(diff)}% ${sign} rispetto al mese scorso` });
+    insights.push({ color, icon, text: t('misc.spending_vs', {n: Math.abs(diff), dir}) });
   }
 
   // 2. Categoria dominante
@@ -1299,7 +1315,7 @@ function calcInsights(thisRx, prevRx, mo) {
       const pct = Math.round(top[1] / thisTotal * 100);
       const cat = catById(top[0]);
       if (pct >= 25) {
-        insights.push({ color: cat.color, icon: cat.icon, text: `${catName(cat)} ${pct}% ${state.settings.lang==='en'?'of spending this month':'della spesa questo mese'}` });
+        insights.push({ color: cat.color, icon: cat.icon, text: t('misc.cat_spending', {cat: catName(cat), n: pct}) });
       }
     }
   }
@@ -1318,7 +1334,7 @@ function calcInsights(thisRx, prevRx, mo) {
   // 4. Negozio più visitato
   if (thisRx.length >= 2) {
     const storeCounts = {};
-    thisRx.forEach(r => { const s = r.storeName || 'Negozio'; storeCounts[s] = (storeCounts[s] || 0) + 1; });
+    thisRx.forEach(r => { const s = r.storeName || t('misc.store'); storeCounts[s] = (storeCounts[s] || 0) + 1; });
     const topStore = Object.entries(storeCounts).sort((a, b) => b[1] - a[1])[0];
     if (topStore && topStore[1] >= 2) {
       insights.push({ color: 'var(--purple)', icon: '🏪', text: `${topStore[0]}: ${topStore[1]} ${topStore[1] === 1 ? t('misc.visits_one') : t('misc.visits_many')}` });
@@ -1415,7 +1431,7 @@ function renderBudgetSection(spent, budget) {
     <div class="budget-info">
       <div class="budget-lbl">${t('dash.budget')}</div>
       <div class="budget-remain">${remainText}</div>
-      <div class="budget-meta">${fmt(spent)} di ${fmt(budget)}</div>
+      <div class="budget-meta">${fmt(spent)}${t('misc.of')}${fmt(budget)}</div>
     </div>
   </div>`;
 }
@@ -1446,7 +1462,7 @@ function renderSparkSection(data) {
   <div class="card spark-wrap">
     <div class="spark-hdr">
       <span class="spark-title">${t('dash.last6')}</span>
-      ${yearTotal > 0 ? `<span style="font-size:12px;font-weight:700;color:var(--lbl)">${fmt(yearTotal)} nel ${year}</span>` : ''}
+      ${yearTotal > 0 ? `<span style="font-size:12px;font-weight:700;color:var(--lbl)">${fmt(yearTotal)} ${t('misc.in_year', {year})}</span>` : ''}
     </div>
     ${sparklineSVG(data)}
   </div>`;
@@ -1551,6 +1567,12 @@ function renderDashboard() {
     </div>`).join('')}
   </div>` : '';
 
+  const emptyMonthState = (state.receipts.length > 0 && thisRx.length === 0) ? `
+  <div style="text-align:center;padding:32px 16px;color:var(--lbl2);font-size:14px">
+    <div style="font-size:32px;margin-bottom:8px">📅</div>
+    <div style="font-weight:600;color:var(--lbl)">${t('misc.no_data_month')}</div>
+  </div>` : '';
+
   const emptyState = state.receipts.length === 0 ? `
   <div class="welcome-wrap">
     <div class="welcome-hero">
@@ -1581,7 +1603,7 @@ function renderDashboard() {
   <div class="card ai-month-card" id="dash-ai-card">
     <div class="ai-hdr">
       <span style="font-size:16px">✦</span>
-      <h3>Analisi Mensile AI</h3>
+      <h3>${t('dash.ai_monthly')}</h3>
       <span class="ai-badge">Claude</span>
     </div>
     ${cachedAnalysis?.text
@@ -1622,13 +1644,13 @@ function renderDashboard() {
       <div class="brand-ico-wrap"><span class="brand-ico">S</span></div>
       <span class="brand-name">slippy</span>
     </div>
-    ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}${t('date.today')[0].toLowerCase() === 'o' ? 'gg' : 'd'}</span>` : ''}
+    ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}${state.settings.lang === 'en' ? 'd' : 'gg'}</span>` : ''}
   </div>
   <div class="card spend-card">
     <div class="spend-mrow">
-      <button onclick="shiftMonth(-1)" ${prevDisabled}>‹</button>
+      <button onclick="shiftMonth(-1)" ${prevDisabled} aria-label="${t('btn.back')}">‹</button>
       <span>${monthLabel(mo)}</span>
-      <button onclick="shiftMonth(1)" ${nextDisabled}>›</button>
+      <button onclick="shiftMonth(1)" ${nextDisabled} aria-label="${t('dash.forecast')}">›</button>
     </div>
     <div class="s-lbl">${t('dash.spending')}</div>
     <div class="s-amt">${fmt(total)}</div>
@@ -1652,6 +1674,7 @@ function renderDashboard() {
   ${yearlySection}
   ${chartSection}
   ${topStoresSection}
+  ${emptyMonthState}
   ${aiMonthCard}
   ${nudgeBudget}
   ${nudgeAI}
@@ -1715,7 +1738,7 @@ function renderReceipts(q) {
   const usedCats = [...new Set(state.receipts.map(r => r.category))];
   const catCounts = {};
   state.receipts.forEach(r => { catCounts[r.category] = (catCounts[r.category] || 0) + 1; });
-  const dateStr = state.settings.lang === 'en' ? 'Date' : 'Data';
+  const dateStr = t('form.date');
   const sortLabel = { date_desc: '↓ ' + dateStr, date_asc: '↑ ' + dateStr, amt_desc: '↓ ' + currSym(), amt_asc: '↑ ' + currSym() };
   const nextSort  = { date_desc: 'amt_desc', amt_desc: 'amt_asc', amt_asc: 'date_asc', date_asc: 'date_desc' };
   const filterBar = `
@@ -1730,7 +1753,7 @@ function renderReceipts(q) {
           onclick="setFilter('${cid}')">${c.icon} ${catName(c)} <span class="chip-cnt">${catCounts[cid] || 0}</span></button>`;
       }).join('')}
     </div>
-    <button class="sort-btn" onclick="setSort('${nextSort[state.sortOrder] || 'date_desc'}')">${sortLabel[state.sortOrder] || '↓ Data'}</button>
+    <button class="sort-btn" onclick="setSort('${nextSort[state.sortOrder] || 'date_desc'}')">${sortLabel[state.sortOrder] || ('↓ ' + dateStr)}</button>
   </div>`;
 
   const isFiltered = query || state.filterCat;
@@ -1759,7 +1782,7 @@ function renderReceipts(q) {
           <div class="rx-del-btn" onclick="quickDelete('${r.id}')"><span>${t('btn.delete')}</span></div>
           <div class="lrow" data-id="${r.id}" onclick="handleRowTap('${r.id}')">
             ${r.imageDataURL
-              ? `<img src="${r.imageDataURL}" class="rx-thumb"/>`
+              ? `<img src="${r.imageDataURL}" class="rx-thumb" alt="${esc(r.storeName || t('misc.store'))}"/>`
               : `<div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>`}
             <div class="ri">
               <div class="rn">${esc(r.storeName || t('misc.store'))}${badge}</div>
@@ -1780,7 +1803,7 @@ function renderReceipts(q) {
   });
   const thisMonthTotal = thisMonthRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const totalLine = state.receipts.length > 0
-    ? `<span class="rx-month-total">${fmt(thisMonthTotal)} ${t('dash.week').toLowerCase()}</span>`
+    ? `<span class="rx-month-total">${t('misc.this_month', {amount: fmt(thisMonthTotal)})}</span>`
     : '';
 
   el.innerHTML = `
@@ -1792,7 +1815,7 @@ function renderReceipts(q) {
     <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input class="search-inp" placeholder="${t('rx.search_ph')}"
       value="${esc(state.searchQ)}" oninput="renderReceipts(this.value)"/>
-    ${state.searchQ ? `<button class="search-clear" onclick="renderReceipts('')" aria-label="Cancella ricerca">✕</button>` : ''}
+    ${state.searchQ ? `<button class="search-clear" onclick="renderReceipts('')" aria-label="${t('aria.clear_search')}">✕</button>` : ''}
   </div>
   ${usedCats.length > 0 ? filterBar : ''}
   ${countLine}
@@ -1811,7 +1834,7 @@ function buildDetailHTML(id) {
   const chipsHTML = CATS.map(c => `
   <button class="chip ${c.id === r.category ? 'sel' : ''}"
     style="${c.id === r.category ? 'background:' + c.color + ';' : ''}"
-    onclick="setCategory('${id}','${c.id}')">${c.icon} ${c.name}</button>`).join('');
+    onclick="setCategory('${id}','${c.id}')">${c.icon} ${catName(c)}</button>`).join('');
 
   const itemsHTML = (r.items || []).length > 0 ? `
   <div class="det-sec">
@@ -1820,14 +1843,14 @@ function buildDetailHTML(id) {
       ${r.items.map(it => `
       <div class="irow">
         <span class="in">${esc(it.name)}</span>
-        <span class="ia">${fmt(it.amount)}</span>
+        <span class="ia">${fmt(it.price)}</span>
       </div>`).join('')}
     </div>
   </div>` : '';
 
   const rawHTML = r.rawText ? `
   <div class="det-sec">
-    <h3>Testo OCR</h3>
+    <h3>OCR</h3>
     <div class="card" style="padding:12px 16px">
       <pre style="font-size:11px;white-space:pre-wrap;color:var(--lbl2);font-family:'Menlo',monospace;line-height:1.5">${esc(r.rawText)}</pre>
     </div>
@@ -1836,7 +1859,7 @@ function buildDetailHTML(id) {
   const existingTip = state.aiTips[id];
   const tipHTML = existingTip
     ? `<p class="ai-tip">${esc(existingTip)}</p>`
-    : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Ottieni un consiglio personalizzato per questo scontrino.</p>
+    : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">${t('dash.ai_tip_desc')}</p>
        <button class="ai-btn" onclick="fetchTip('${id}')">${t('btn.get_advice')}</button>`;
 
   return `
@@ -1844,7 +1867,7 @@ function buildDetailHTML(id) {
     <button class="back-btn" onclick="closeOverlay('odetail')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> ${t('btn.back')}</button>
     <h2>${t('overlay.receipt')}</h2>
     <div style="display:flex;gap:6px;align-items:center">
-      <button class="back-btn share-btn" onclick="shareReceipt('${id}')" title="Condividi">
+      <button class="back-btn share-btn" onclick="shareReceipt('${id}')" title="${t('dash.share')}">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
           <polyline points="16 6 12 2 8 6"/>
@@ -1866,7 +1889,7 @@ function buildDetailHTML(id) {
       <div class="det-hero-amt">${fmt(r.totalAmount || 0)}</div>
       <div class="det-hero-date">${fmtDate(r.date || r.createdAt)}</div>
       ${r.imageDataURL ? `<div class="det-hero-thumb" onclick="openImage('${id}')">
-        <img src="${r.imageDataURL}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;opacity:.85"/>
+        <img src="${r.imageDataURL}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;opacity:.85" alt="${esc(t('detail.photo_title'))}"/>
         <span style="font-size:11px;color:rgba(255,255,255,.55);margin-top:4px">${t('detail.view_photo')}</span>
       </div>` : ''}
     </div>
@@ -2210,7 +2233,7 @@ function parseCSVRow(line) {
 
 function clearAllData() {
   haptic('medium');
-  confirmSheet(t('confirm.delete_all', {n: state.receipts.length}), t('misc.delete_all'), () => {
+  confirmSheet(t('confirm.delete_all', {n: state.receipts.length}), t('btn.delete'), () => {
     haptic('heavy');
     state.receipts = [];
     state.aiTips   = {};
@@ -2235,7 +2258,7 @@ async function fetchTip(receiptId) {
   }
 
   if (tipEl) tipEl.innerHTML = `
-    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Consiglio AI</h3><span class="ai-badge">Claude</span></div>
+    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>${t('dash.ai_tip')}</h3><span class="ai-badge">Claude</span></div>
     <div class="spin" style="width:26px;height:26px;margin:10px auto;border-width:3px"></div>`;
 
   try {
@@ -2269,18 +2292,18 @@ async function fetchTip(receiptId) {
     }
 
     const data = await res.json();
-    const tip  = data.content?.[0]?.text?.trim() || 'Nessun consiglio disponibile.';
+    const tip  = data.content?.[0]?.text?.trim() || t('toast.no_advice');
     state.aiTips[receiptId] = tip;
 
     if (tipEl) tipEl.innerHTML = `
-      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Consiglio AI</h3><span class="ai-badge">Claude</span></div>
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>${t('dash.ai_tip')}</h3><span class="ai-badge">Claude</span></div>
       <p class="ai-tip">${esc(tip)}</p>`;
   } catch (err) {
-    const msg = err.message || 'Errore nel recupero del consiglio';
+    const msg = err.message || t('toast.ai_error');
     if (tipEl) tipEl.innerHTML = `
-      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Consiglio AI</h3><span class="ai-badge">Claude</span></div>
+      <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>${t('dash.ai_tip')}</h3><span class="ai-badge">Claude</span></div>
       <p style="font-size:13px;color:var(--red);margin-bottom:8px">${esc(msg)}</p>
-      <button class="ai-btn" onclick="fetchTip('${receiptId}')">Riprova</button>`;
+      <button class="ai-btn" onclick="fetchTip('${receiptId}')">${t('btn.retry')}</button>`;
   }
 }
 
@@ -2329,7 +2352,7 @@ function init() {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      if (document.getElementById('sheet')?.classList.contains('open')) { closeSheet(); }
+      if (document.getElementById('sht')?.classList.contains('on')) { closeSheet(); }
       else {
         const overlays = ['oscanner','oedit','odetail','osettings','ostats'];
         const open = overlays.find(id => document.getElementById(id)?.classList.contains('on'));
@@ -2338,11 +2361,13 @@ function init() {
     }
   });
 
-  // Apply saved language to tab labels
+  // Apply saved language to tab labels and FAB
   const _r = document.getElementById('tab-lbl-r');
   const _s = document.getElementById('tab-lbl-s');
   if (_r) _r.textContent = t('tab.receipts');
   if (_s) _s.textContent = t('tab.settings');
+  const _fab = document.getElementById('fab');
+  if (_fab) _fab.setAttribute('aria-label', t('aria.fab'));
 
   renderDashboard();
 
