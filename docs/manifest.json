@@ -4,6 +4,8 @@
   "description": "Snap your slip. Know your spending.",
   "start_url": "./",
   "id": "./",
+  "scope": "./",
+  "lang": "it",
   "display": "standalone",
   "background_color": "#F2F2F7",
   "theme_color": "#007AFF",
