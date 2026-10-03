@@ -232,10 +232,10 @@ async function shareMonthSummary(moKey) {
   haptic('light');
   if (navigator.share) {
     try { await navigator.share({ title: t('share.title', {month: monthLabel(mo)}), text }); }
-    catch(e) { if (e.name !== 'AbortError') toast('Impossibile condividere'); }
+    catch(e) { if (e.name !== 'AbortError') toast(t('toast.cant_share')); }
   } else {
     try { await navigator.clipboard.writeText(text); toast(t('toast.summary_copied')); }
-    catch(e) { toast('Condivisione non supportata'); }
+    catch(e) { toast(t('toast.no_share')); }
   }
 }
 
@@ -743,7 +743,7 @@ function openManualEntry() {
     `<option value="${c.id}" ${c.id === 'groceries' ? 'selected' : ''}>${c.icon} ${catName(c)}</option>`
   ).join('');
   const aiBtn = state.settings.geminiKey
-    ? `<button class="btn btn-s" id="ai-btn" onclick="analyzeWithAI()" style="gap:6px;margin-top:4px">✨ Analizza con AI</button>`
+    ? `<button class="btn btn-s" id="ai-btn" onclick="analyzeWithAI()" style="gap:6px;margin-top:4px">${t('btn.analyze_ai')}</button>`
     : '';
   openOverlay('oscanner', `
   <div class="nav-row">
@@ -860,7 +860,7 @@ function _doSaveManual(name, total, date, catId, note) {
   if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
   haptic('medium');
   closeOverlay('oscanner');
-  toast('Scontrino salvato!');
+  toast(t('toast.saved'));
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
 }
@@ -923,7 +923,7 @@ async function analyzeWithAI() {
   if (!state.pendingPhoto) { toast(t('toast.need_photo')); return; }
 
   const btn = document.getElementById('ai-btn');
-  if (btn) btn.textContent = '⏳ Analisi in corso…';
+  if (btn) btn.textContent = t('btn.analyzing');
 
   try {
     const base64 = state.pendingPhoto.split(',')[1];
@@ -962,11 +962,11 @@ async function analyzeWithAI() {
     if (md && data.date)   md.value = data.date;
     if (mn && data.store)  autoCategory(data.store);
 
-    if (btn) { btn.textContent = '✓ Pre-compilato'; btn.style.color = 'var(--green,#34C759)'; }
+    if (btn) { btn.textContent = t('btn.prefilled'); btn.style.color = 'var(--green,#34C759)'; }
     toast(t('toast.prefilled'));
   } catch (err) {
-    if (btn) { btn.textContent = '✨ Analizza con AI'; btn.style.color = ''; }
-    toast('Errore AI — ' + (err.message.includes('400') ? 'API key non valida' : 'riprova'));
+    if (btn) { btn.textContent = t('btn.analyze_ai'); btn.style.color = ''; }
+    toast(err.message.includes('400') ? t('toast.ai_key_error') : t('toast.ai_error'));
   }
 }
 
@@ -1912,7 +1912,7 @@ function confirmDelete(id) {
     state.receipts = state.receipts.filter(x => x.id !== id);
     persist();
     closeOverlay('odetail');
-    toast('Scontrino eliminato');
+    toast(t('toast.deleted'));
     renderDashboard();
     if (state.tab === 'r') renderReceipts();
     else if (state.tab === 's') renderSettings();
@@ -2196,7 +2196,7 @@ async function fetchTip(receiptId) {
   if (!r) return;
 
   if (!key) {
-    toast('Aggiungi la tua API key Claude nelle Impostazioni');
+    toast(t('toast.need_claude_key'));
     return;
   }
 
