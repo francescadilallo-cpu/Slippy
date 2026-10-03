@@ -67,15 +67,20 @@ function persist() {
 function persistTips() {
   try { localStorage.setItem('slippy_tips', JSON.stringify(state.aiTips)); } catch(_) {}
 }
+function persistAnalysis() {
+  try { localStorage.setItem('slippy_analysis', JSON.stringify(state.monthlyAnalysis)); } catch(_) {}
+}
 function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
     const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
     state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it' }, saved);
-    state.learned  = JSON.parse(localStorage.getItem('slippy_learned')  || '{}');
-    state.aiTips   = JSON.parse(localStorage.getItem('slippy_tips')     || '{}');
+    state.learned         = JSON.parse(localStorage.getItem('slippy_learned')   || '{}');
+    state.aiTips          = JSON.parse(localStorage.getItem('slippy_tips')      || '{}');
+    state.monthlyAnalysis = JSON.parse(localStorage.getItem('slippy_analysis')  || '{}');
   } catch(_) {
-    state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR', lang: 'it' }; state.learned = {}; state.aiTips = {};
+    state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR', lang: 'it' };
+    state.learned = {}; state.aiTips = {}; state.monthlyAnalysis = {};
   }
 }
 function saveSettings() { localStorage.setItem('slippy_settings', JSON.stringify(state.settings)); }
@@ -332,6 +337,7 @@ async function fetchMonthlyAnalysis(monthKey) {
     const data = await res.json();
     const text = data.content?.[0]?.text?.trim() || '';
     state.monthlyAnalysis[monthKey] = { text };
+    persistAnalysis();
     renderDashboard();
   } catch(err) {
     state.monthlyAnalysis[monthKey] = null;
@@ -459,7 +465,7 @@ const LANG = {
     'btn.prefilled':'✓ Pre-compilato','btn.analyze_month':'Analizza questo mese →',
     'btn.regenerate':'↺ Rigenera','btn.retry':'Riprova','btn.get_advice':'Ottieni consiglio',
     'btn.show':'Mostra','btn.hide':'Nascondi','btn.remove_key':'Rimuovi Chiave',
-    'btn.save_budget':'Salva Budget',
+    'btn.save_budget':'Salva Budget','btn.prev_month':'Mese precedente','btn.next_month':'Mese successivo',
     'toast.saved':'Scontrino salvato!','toast.deleted':'Scontrino eliminato',
     'toast.updated':'Scontrino aggiornato',
     'toast.duplicated':'Scontrino duplicato — aggiorna data e importo se necessario',
@@ -558,7 +564,7 @@ const LANG = {
     'btn.prefilled':'✓ Pre-filled','btn.analyze_month':'Analyse this month →',
     'btn.regenerate':'↺ Regenerate','btn.retry':'Retry','btn.get_advice':'Get advice',
     'btn.show':'Show','btn.hide':'Hide','btn.remove_key':'Remove Key',
-    'btn.save_budget':'Save Budget',
+    'btn.save_budget':'Save Budget','btn.prev_month':'Previous month','btn.next_month':'Next month',
     'toast.saved':'Receipt saved!','toast.deleted':'Receipt deleted',
     'toast.updated':'Receipt updated',
     'toast.duplicated':'Receipt duplicated — update date and amount if needed',
@@ -1660,9 +1666,9 @@ function renderDashboard() {
   </div>
   ${state.receipts.length > 0 ? `<div class="card spend-card">
     <div class="spend-mrow">
-      <button onclick="shiftMonth(-1)" ${prevDisabled} aria-label="${t('btn.back')}">‹</button>
+      <button onclick="shiftMonth(-1)" ${prevDisabled} aria-label="${t('btn.prev_month')}">‹</button>
       <span>${monthLabel(mo)}</span>
-      <button onclick="shiftMonth(1)" ${nextDisabled} aria-label="${t('dash.forecast')}">›</button>
+      <button onclick="shiftMonth(1)" ${nextDisabled} aria-label="${t('btn.next_month')}">›</button>
     </div>
     <div class="s-lbl">${t('dash.spending')}</div>
     <div class="s-amt">${fmt(total)}</div>
@@ -1774,7 +1780,7 @@ function renderReceipts(q) {
   const isFiltered = query || state.filterCat;
   const filteredTotal = list.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const countLine = isFiltered && list.length > 0
-    ? `<div class="result-count">${t('misc.results', {n: list.length, s: state.settings.lang === 'en' ? (list.length===1?'':' ') : (list.length===1?'o':'i'), amount: fmt(filteredTotal)})}</div>`
+    ? `<div class="result-count">${t('misc.results', {n: list.length, s: state.settings.lang === 'en' ? (list.length===1?'':'s') : (list.length===1?'o':'i'), amount: fmt(filteredTotal)})}</div>`
     : '';
 
   let bodyHTML = '';
@@ -2242,10 +2248,12 @@ function clearAllData() {
   haptic('medium');
   confirmSheet(t('confirm.delete_all', {n: state.receipts.length}), t('btn.delete'), () => {
     haptic('heavy');
-    state.receipts = [];
-    state.aiTips   = {};
+    state.receipts        = [];
+    state.aiTips          = {};
+    state.monthlyAnalysis = {};
     persist();
     localStorage.removeItem('slippy_tips');
+    localStorage.removeItem('slippy_analysis');
     toast(t('toast.data_deleted'));
     renderDashboard();
     renderReceipts();
