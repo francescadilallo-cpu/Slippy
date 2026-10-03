@@ -398,6 +398,7 @@ function openOverlay(id, html) {
 
 function closeOverlay(id) {
   const el = document.getElementById(id);
+  if (!el) return;
   el.classList.remove('on');
   setTimeout(() => {
     el.innerHTML = '';
@@ -1648,7 +1649,7 @@ function renderDashboard() {
     </div>
     ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}${state.settings.lang === 'en' ? 'd' : 'gg'}</span>` : ''}
   </div>
-  <div class="card spend-card">
+  ${state.receipts.length > 0 ? `<div class="card spend-card">
     <div class="spend-mrow">
       <button onclick="shiftMonth(-1)" ${prevDisabled} aria-label="${t('btn.back')}">‹</button>
       <span>${monthLabel(mo)}</span>
@@ -1666,7 +1667,7 @@ function renderDashboard() {
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
       ${t('dash.share')}
     </button>` : ''}
-  </div>
+  </div>` : ''}
   ${forecastSection}
   ${weekSection}
   ${calendarSection}
@@ -1681,7 +1682,7 @@ function renderDashboard() {
   ${nudgeBudget}
   ${nudgeAI}
   ${emptyState}
-  <div class="pad"></div>`;
+  <div class="pad-xl"></div>`;
 
   // Count-up animation on the main spend amount
   animateCount(el.querySelector('.s-amt'), total);
@@ -1822,7 +1823,7 @@ function renderReceipts(q) {
   ${usedCats.length > 0 ? filterBar : ''}
   ${countLine}
   ${bodyHTML}
-  <div class="pad"></div>`;
+  <div class="pad-xl"></div>`;
 
   setupSwipe();
 }
@@ -2068,7 +2069,7 @@ function renderSettings() {
     <div class="settings-brand-name">slippy</div>
     <div class="settings-brand-tag">${t('set.tagline')}</div>
   </div>
-  <div class="pad"></div>`;
+  <div class="pad-xl"></div>`;
 }
 
 function saveBudget() {
