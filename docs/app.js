@@ -1338,18 +1338,7 @@ function calcInsights(thisRx, prevRx, mo) {
     }
   }
 
-  // 3. Forecast se a metà mese
-  const now = new Date();
-  if (sameMonth(now, mo) && thisRx.length >= 2) {
-    const dayOfMonth = now.getDate();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    if (dayOfMonth >= 5 && dayOfMonth <= daysInMonth - 3) {
-      const forecast = Math.round((thisTotal / dayOfMonth) * daysInMonth);
-      insights.push({ color: 'var(--accent)', icon: '🔮', text: t('misc.vs_last', {dir: '🔮', n: fmt(forecast)}) });
-    }
-  }
-
-  // 4. Negozio più visitato
+  // 3. Negozio più visitato
   if (thisRx.length >= 2) {
     const storeCounts = {};
     thisRx.forEach(r => { const s = r.storeName || t('misc.store'); storeCounts[s] = (storeCounts[s] || 0) + 1; });
@@ -1359,7 +1348,7 @@ function calcInsights(thisRx, prevRx, mo) {
     }
   }
 
-  return insights.slice(0, 3);
+  return insights.slice(0, 2);
 }
 
 // ── RENDER: CALENDAR HEATMAP ──────────────────────────────────
