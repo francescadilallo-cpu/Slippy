@@ -1,0 +1,6 @@
+{
+  "appId": "it.slippy.app",
+  "appName": "Slippy",
+  "webDir": "docs",
+  "ios": { "contentInset": "never", "backgroundColor": "#F2F2F7" }
+}

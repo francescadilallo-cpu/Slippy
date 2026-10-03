@@ -7,17 +7,18 @@
 - Model names centralised in `MODELS` (top of `docs/app.js`)
 - Privacy policy at `docs/privacy.html`, linked in Settings
 
-## Before submitting (needs you / a Mac)
-1. Fill in `SUPPORT_EMAIL` in `docs/privacy.html`.
-2. Verify the AI models with real keys: `MODELS.gemini` (`gemini-2.5-flash`) and the Claude ids. Untested here, no keys available.
-3. Apple Developer account ($99/yr).
-4. Wrap with Capacitor on a Mac with Xcode:
-   `npm i @capacitor/core @capacitor/cli @capacitor/ios`, `npx cap init Slippy it.slippy.app --web-dir docs`, `npx cap add ios`, `npx cap sync`.
-5. Add native value (guideline 4.2 rejects thin website wrappers): `@capacitor/camera` for scanning,
-   `@capacitor/haptics`, `@capacitor/share`, local notifications for budget alerts, a widget.
-6. Hosted privacy URL (GitHub Pages `.../privacy.html` works), support URL, 1024px icon, screenshots, privacy nutrition labels
-   (data not collected; AI features send data to the user's chosen provider).
-7. Test on a real iPhone: camera, offline, storage persistence, dark mode, Dynamic Type.
+## iOS project (generated, in `ios/`)
+Capacitor 7 wraps `docs/` (the web app). Native camera + haptics are used automatically inside the app (falls back to the browser in the PWA).
+The original SwiftUI app from the first commit (`App/`, `Views/`, `Slippy.xcodeproj`, ...) is untouched and no longer matches the web app's features. Pick one; recommended: ship the Capacitor build and archive the Swift code.
+
+## Steps on a Mac (cannot be done from this Linux environment)
+1. `npm install && npx cap sync ios && npx cap open ios`
+2. Xcode: select the App target, set your Team (Apple Developer account, $99/yr) and a unique Bundle Identifier (default `it.slippy.app`).
+3. Run on a real iPhone: camera, photo library, haptics, offline, backup/restore, dark mode.
+4. Product > Archive > Distribute App > App Store Connect.
+5. In App Store Connect: privacy policy URL (GitHub Pages `.../privacy.html`), support URL, screenshots (6.7" and 6.1"), description IT/EN, category Finance, price Free, privacy labels ("Data not collected"; AI is optional and uses the user's own key).
+6. Fill in `SUPPORT_EMAIL` in `docs/privacy.html` first. Verify `MODELS` ids with real keys.
+7. Review risk (guideline 4.2): in review notes mention native camera, haptics, offline-first local storage, backup/restore. Consider adding a widget or budget notifications before submitting.
 
 ## Free launch (chosen path)
 - No backend, payments or StoreKit needed. AI stays optional: users add their own Claude/Gemini key; everything else works offline with no account.

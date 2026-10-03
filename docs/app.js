@@ -431,7 +431,11 @@ async function fetchMonthlyAnalysis(monthKey) {
 }
 
 // ── HAPTIC FEEDBACK ───────────────────────────────────────────
+const NATIVE = !!(window.Capacitor?.isNativePlatform?.());
+const nativePlugin = name => (NATIVE ? window.Capacitor?.Plugins?.[name] : null);
 function haptic(type = 'light') {
+  const h = nativePlugin('Haptics');
+  if (h) { h.impact({ style: { light: 'LIGHT', medium: 'MEDIUM', heavy: 'HEAVY' }[type] || 'LIGHT' }).catch(() => {}); return; }
   if (!navigator.vibrate) return;
   const patterns = { light: [8], medium: [20], heavy: [40] };
   if (patterns[type]) navigator.vibrate(patterns[type]);
@@ -775,28 +779,38 @@ function categorize(storeName) {
 }
 
 
-// ── FILE → DATA URL (resized to max 1200px, ≤500KB) ───────────
+// ── PHOTO → RESIZED DATA URL (max 1200px, JPEG 0.82) ──────────
+function resizeDataURL(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onerror = rej;
+    img.onload = () => {
+      const scale = Math.min(1, 1200 / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      res(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.src = src;
+  });
+}
 function fileToDataURL(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onerror = rej;
-    r.onload = e => {
-      const img = new Image();
-      img.onerror = rej;
-      img.onload = () => {
-        const MAX = 1200;
-        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        res(c.toDataURL('image/jpeg', 0.82));
-      };
-      img.src = e.target.result;
-    };
+    r.onload = e => resizeDataURL(e.target.result).then(res, rej);
     r.readAsDataURL(file);
   });
+}
+function applyPendingPhoto(url) {
+  state.pendingPhoto = url;
+  const prev = document.getElementById('photo-preview');
+  const wrap = document.getElementById('photo-preview-wrap');
+  const ph = document.getElementById('photo-placeholder');
+  if (prev) prev.src = url;
+  if (wrap) wrap.style.display = 'block';
+  if (ph) ph.style.display = 'none';
 }
 
 // ── ITEM ROW HELPER ───────────────────────────────────────────
@@ -983,7 +997,17 @@ function openScanner() {
   openManualEntry();
 }
 
-function triggerCapture(camera) {
+async function triggerCapture(camera) {
+  const cam = nativePlugin('Camera');
+  if (cam) {
+    try {
+      const p = await cam.getPhoto({ resultType: 'dataUrl', source: camera ? 'CAMERA' : 'PHOTOS', quality: 85, width: 1600, correctOrientation: true });
+      if (p?.dataUrl) applyPendingPhoto(await resizeDataURL(p.dataUrl));
+    } catch (e) {
+      if (!/cancel/i.test(e?.message || '')) toast(t('toast.photo_error'));
+    }
+    return;
+  }
   const fi = document.getElementById('filein');
   if (camera) fi.setAttribute('capture', 'environment');
   else        fi.removeAttribute('capture');
@@ -2467,14 +2491,7 @@ function init() {
     if (!file) return;
     e.target.value = '';
     try {
-      const url = await fileToDataURL(file);
-      state.pendingPhoto = url;
-      const prev = document.getElementById('photo-preview');
-      const wrap = document.getElementById('photo-preview-wrap');
-      const ph = document.getElementById('photo-placeholder');
-      if (prev) prev.src = url;
-      if (wrap) wrap.style.display = 'block';
-      if (ph) ph.style.display = 'none';
+      applyPendingPhoto(await fileToDataURL(file));
     } catch (_) { toast(t('toast.photo_error')); }
   });
 
