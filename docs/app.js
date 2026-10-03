@@ -119,7 +119,7 @@ function parseDate(s) {
 function catById(id) { return CATS.find(c => c.id === id) || CATS[CATS.length - 1]; }
 function esc(s) {
   return String(s == null ? '' : s)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function toast(msg) {
   const el = document.getElementById('toast');
@@ -1716,8 +1716,8 @@ function renderReceipts(q) {
   let list = [...state.receipts].sort((a, b) => {
     if (state.sortOrder === 'amt_desc') return (b.totalAmount || 0) - (a.totalAmount || 0);
     if (state.sortOrder === 'amt_asc') return (a.totalAmount || 0) - (b.totalAmount || 0);
-    if (state.sortOrder === 'date_asc') return new Date(a.date || a.createdAt) - new Date(b.date || b.createdAt);
-    return new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt);
+    if (state.sortOrder === 'date_asc') return parseDate(a.date || a.createdAt) - parseDate(b.date || b.createdAt);
+    return parseDate(b.date || b.createdAt) - parseDate(a.date || a.createdAt);
   });
   if (query) {
     list = list.filter(r => {
@@ -2135,13 +2135,13 @@ function exportCSV() {
       csvQ(r.storeName),
       (r.totalAmount || 0).toFixed(2),
       state.settings.currency || 'EUR',
-      r.date || '',
+      r.date || localDateStr(parseDate(r.createdAt)),
       r.category || 'other',
       csvQ((r.items || []).map(i => { const p = i.price ?? i.amount; return p != null ? `${i.name}:${Number(p).toFixed(2)}` : i.name; }).join('; ')),
       csvQ(r.note || r.notes),
     ].join(','));
   });
-  downloadCSVBlob(rows.join('\n'), `slippy-export-${new Date().toISOString().slice(0, 10)}.csv`);
+  downloadCSVBlob(rows.join('\n'), `slippy-export-${localDateStr()}.csv`);
   toast(t('toast.csv_exported'));
 }
 function downloadTemplate() {
@@ -2201,7 +2201,7 @@ function handleCSVImport(input) {
           : [];
         const note = notesIdx >= 0 ? (cols[notesIdx] || '') : '';
         existing.add(id);
-        state.receipts.push({ id, storeName: store, totalAmount: total, date, category, items, note: note || undefined, createdAt: date });
+        state.receipts.push({ id, storeName: store, totalAmount: total, date, category, items, note: note || undefined, createdAt: new Date().toISOString() });
         added++;
       });
 
