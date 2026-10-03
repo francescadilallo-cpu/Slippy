@@ -719,53 +719,6 @@ function isDuplicate(name, total) {
   });
 }
 
-function saveReceiptFromForm() {
-  const name  = (document.getElementById('fn')?.value || '').trim() || t('misc.store');
-  const total = parseFloat(document.getElementById('ft')?.value || '0') || 0;
-  const date  = document.getElementById('fd')?.value || new Date().toISOString().split('T')[0];
-  const catId = document.getElementById('fc')?.value || 'other';
-  const note  = (document.getElementById('fnote')?.value || '').trim();
-
-  // Duplicate detection
-  if (isDuplicate(name, total)) {
-    confirmSheet(t('confirm.duplicate'), t('btn.save_anyway'),
-      () => _doSaveFromForm(name, total, date, catId, note), false);
-    return;
-  }
-
-  _doSaveFromForm(name, total, date, catId, note);
-}
-
-function _doSaveFromForm(name, total, date, catId, note) {
-  const items = [];
-  let i = 0;
-  while (document.getElementById('itn' + i)) {
-    const n = (document.getElementById('itn' + i).value || '').trim();
-    const a = parseFloat(document.getElementById('ita' + i).value || '0') || 0;
-    if (n) items.push({ name: n, price: a });
-    i++;
-  }
-
-  const receipt = {
-    id: uid(), storeName: name, totalAmount: total,
-    date, createdAt: new Date().toISOString(),
-    category: catId, items,
-    rawText: state.ocrData?.rawText || '',
-    imageDataURL: state.ocrData?.imgDataURL || null,
-    note: note || undefined,
-  };
-
-  state.receipts.unshift(receipt);
-  persist();
-  if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
-
-  haptic('medium');
-  closeOverlay('oscanner');
-  toast(t('toast.saved'));
-  renderDashboard();
-  if (state.tab === 'r') renderReceipts();
-}
-
 // ── MANUAL ENTRY ─────────────────────────────────────────────
 function openManualEntry() {
   haptic('light');
