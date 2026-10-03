@@ -126,6 +126,55 @@ async function loadPhotos() {
     });
     persist();
   } catch (_) { _idbOk = false; }
+  finally { _booting = false; }
+}
+
+const NATIVE = !!(window.Capacitor?.isNativePlatform?.());
+const nativePlugin = name => (NATIVE ? window.Capacitor?.Plugins?.[name] : null);
+
+// ── BUDGET ALERTS ─────────────────────────────────────────────
+let _booting = true;
+function budgetLevel() {
+  const budget = state.settings.budget || 0;
+  if (budget <= 0) return { level: 0, pct: 0, total: 0, budget };
+  const now = new Date();
+  const total = state.receipts
+    .filter(r => sameMonth(parseDate(r.date || r.createdAt), now))
+    .reduce((s, r) => s + (r.totalAmount || 0), 0);
+  const pct = total / budget * 100;
+  return { level: pct >= 100 ? 100 : pct >= 80 ? 80 : 0, pct, total, budget };
+}
+function checkBudgetAlert(silent) {
+  const now = new Date();
+  const key = `${now.getFullYear()}-${now.getMonth()}`;
+  const { level, pct, total, budget } = budgetLevel();
+  const alerted = state.settings.alerted || (state.settings.alerted = {});
+  const prev = alerted[key] || 0;
+  if (level === prev) return;
+  alerted[key] = level;
+  saveSettings();
+  if (silent || _booting || level < prev || !state.settings.notify) return;
+  const title = t(level === 100 ? 'notify.100_title' : 'notify.80_title');
+  const body = t(level === 100 ? 'notify.100_body' : 'notify.80_body',
+    { pct: Math.round(pct), amount: fmt(total), budget: fmt(budget), month: monthLabel(now) });
+  toast(body);
+  const ln = nativePlugin('LocalNotifications');
+  if (ln) {
+    ln.schedule({ notifications: [{ id: Math.floor(Date.now() / 1000) % 2000000000, title, body,
+      schedule: { at: new Date(Date.now() + 500) } }] }).catch(() => {});
+  }
+}
+async function askNotifyPermission() {
+  const ln = nativePlugin('LocalNotifications');
+  if (!ln) return;
+  try { const p = await ln.checkPermissions(); if (p.display === 'prompt' || p.display === 'prompt-with-rationale') await ln.requestPermissions(); } catch (_) {}
+}
+function toggleNotify() {
+  state.settings.notify = !state.settings.notify;
+  saveSettings();
+  if (state.settings.notify) askNotifyPermission();
+  haptic('light');
+  renderSettings();
 }
 
 function persist() {
@@ -135,6 +184,7 @@ function persist() {
   try { localStorage.setItem('slippy_receipts', JSON.stringify(slim)); }
   catch (_) { toast(t('toast.storage_full')); return false; }
   syncPhotos();
+  checkBudgetAlert();
   return true;
 }
 function persistTips() {
@@ -147,7 +197,7 @@ function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
     const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
-    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it' }, saved);
+    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it', notify: true, alerted: {} }, saved);
     state.learned         = JSON.parse(localStorage.getItem('slippy_learned')   || '{}');
     state.aiTips          = JSON.parse(localStorage.getItem('slippy_tips')      || '{}');
     state.monthlyAnalysis = JSON.parse(localStorage.getItem('slippy_analysis')  || '{}');
@@ -431,8 +481,6 @@ async function fetchMonthlyAnalysis(monthKey) {
 }
 
 // ── HAPTIC FEEDBACK ───────────────────────────────────────────
-const NATIVE = !!(window.Capacitor?.isNativePlatform?.());
-const nativePlugin = name => (NATIVE ? window.Capacitor?.Plugins?.[name] : null);
 function haptic(type = 'light') {
   const h = nativePlugin('Haptics');
   if (h) { h.impact({ style: { light: 'LIGHT', medium: 'MEDIUM', heavy: 'HEAVY' }[type] || 'LIGHT' }).catch(() => {}); return; }
@@ -552,6 +600,9 @@ const LANG = {
     'btn.show':'Mostra','btn.hide':'Nascondi','btn.remove_key':'Rimuovi Chiave',
     'btn.save_budget':'Salva Budget','btn.prev_month':'Mese precedente','btn.next_month':'Mese successivo',
     'misc.streak_days':'gg',
+    'set.notify':'Avvisi budget','set.notify_note':'Ricevi un avviso all\'80% e al 100% del budget mensile.',
+    'notify.80_title':'Attenzione al budget','notify.80_body':'Hai speso il {pct}% del budget di {month}: {amount} su {budget}.',
+    'notify.100_title':'Budget superato','notify.100_body':'Hai superato il budget di {month}: {amount} su {budget}.',
     'toast.storage_full':'Memoria piena: impossibile salvare. Esporta un backup e libera spazio.',
     'set.backup':'Backup completo (JSON)','set.restore_backup':'Ripristina backup',
     'toast.backup_ok':'Backup scaricato','toast.backup_invalid':'File di backup non valido',
@@ -658,6 +709,9 @@ const LANG = {
     'btn.show':'Show','btn.hide':'Hide','btn.remove_key':'Remove Key',
     'btn.save_budget':'Save Budget','btn.prev_month':'Previous month','btn.next_month':'Next month',
     'misc.streak_days':'d',
+    'set.notify':'Budget alerts','set.notify_note':'Get an alert at 80% and 100% of your monthly budget.',
+    'notify.80_title':'Budget warning','notify.80_body':'You have spent {pct}% of your {month} budget: {amount} of {budget}.',
+    'notify.100_title':'Budget exceeded','notify.100_body':'You have exceeded your {month} budget: {amount} of {budget}.',
     'toast.storage_full':'Storage full: could not save. Export a backup and free up space.',
     'set.backup':'Full backup (JSON)','set.restore_backup':'Restore backup',
     'toast.backup_ok':'Backup downloaded','toast.backup_invalid':'Invalid backup file',
@@ -2103,7 +2157,12 @@ function renderSettings() {
         placeholder="0" value="${budget > 0 ? budget : ''}"
         style="text-align:right;font-size:16px;font-family:inherit;color:var(--accent);max-width:90px"/>
     </div>
-    <div class="snote">${t('set.budget_note')}</div>
+    <div class="srow si-row" style="margin-top:8px;border-radius:var(--r)" onclick="toggleNotify()" role="switch" aria-checked="${state.settings.notify !== false}" tabindex="0">
+      <div class="si-ico" style="background:#FF3B3022">🔔</div>
+      <span class="slbl">${t('set.notify')}</span>
+      <span class="sw ${state.settings.notify !== false ? 'on' : ''}"><i></i></span>
+    </div>
+    <div class="snote">${t('set.budget_note')} ${t('set.notify_note')}</div>
     <button class="btn btn-p" style="margin-top:8px" onclick="saveBudget()">${t('btn.save_budget')}</button>
   </div>
   <div class="ssel">
@@ -2199,6 +2258,8 @@ function saveBudget() {
   const v = Math.max(0, parseFloat(document.getElementById('budgetInp')?.value || '0') || 0);
   state.settings.budget = v;
   saveSettings();
+  checkBudgetAlert(true);
+  if (v > 0 && state.settings.notify) askNotifyPermission();
   haptic('medium');
   toast(v > 0 ? t('misc.budget_set', {amount: fmt(v)}) : t('misc.budget_removed'));
   renderSettings();
@@ -2543,6 +2604,7 @@ function init() {
   renderDashboard();
 
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+  checkBudgetAlert(true);
   loadPhotos().then(() => {
     renderDashboard();
     if (state.tab === 'r') renderReceipts();

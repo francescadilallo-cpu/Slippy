@@ -8,7 +8,7 @@
 - Privacy policy at `docs/privacy.html`, linked in Settings
 
 ## iOS project (generated, in `ios/`)
-Capacitor 7 wraps `docs/` (the web app). Native camera + haptics are used automatically inside the app (falls back to the browser in the PWA).
+Capacitor 7 wraps `docs/` (the web app). Native camera, haptics and budget-alert notifications (80% and 100% of the monthly budget) are used automatically inside the app (falls back to the browser in the PWA).
 The original SwiftUI prototype now lives in `legacy-swift/` (no longer maintained).
 
 ## Steps on a Mac (cannot be done from this Linux environment)
@@ -18,7 +18,7 @@ The original SwiftUI prototype now lives in `legacy-swift/` (no longer maintaine
 4. Product > Archive > Distribute App > App Store Connect.
 5. In App Store Connect: privacy policy URL (GitHub Pages `.../privacy.html`), support URL, screenshots (6.7" and 6.1"), description IT/EN, category Finance, price Free, privacy labels ("Data not collected"; AI is optional and uses the user's own key).
 6. Fill in `SUPPORT_EMAIL` in `docs/privacy.html` first. Verify `MODELS` ids with real keys.
-7. Review risk (guideline 4.2): in review notes mention native camera, haptics, offline-first local storage, backup/restore. Consider adding a widget or budget notifications before submitting.
+7. Review risk (guideline 4.2): in review notes mention native camera, haptics, offline-first local storage, backup/restore. Budget notifications are included; a home-screen widget would further reduce risk.
 
 ## Free launch (chosen path)
 - No backend, payments or StoreKit needed. AI stays optional: users add their own Claude/Gemini key; everything else works offline with no account.
