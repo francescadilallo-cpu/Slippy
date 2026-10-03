@@ -523,7 +523,7 @@ const LANG = {
     'share.summary':'Riepilogo {month}','share.total':'Spesa totale:','share.receipts':'Scontrini:',
     'share.average':'Media:','share.by_cat':'Per categoria:','share.title':'{month} Spese',
     'share.receipt_total':'Totale:',
-    'year.total':'Totale anno','year.receipts':'Scontrini','year.avg_month':'Media/mese',
+    'year.title':'Riepilogo {year}','year.total':'Totale anno','year.receipts':'Scontrini','year.avg_month':'Media/mese',
     'year.top_cat':'Categoria principale','year.top_month':'📈 Mese più costoso',
     'welcome.title':'Benvenuto su Slippy','welcome.sub':'Il modo più intelligente di tracciare le spese quotidiane.',
     'welcome.step1':'Fotografa uno scontrino con la fotocamera',
@@ -622,7 +622,7 @@ const LANG = {
     'share.summary':'{month} Summary','share.total':'Total spending:','share.receipts':'Receipts:',
     'share.average':'Average:','share.by_cat':'By category:','share.title':'{month} Expenses',
     'share.receipt_total':'Total:',
-    'year.total':'Year total','year.receipts':'Receipts','year.avg_month':'Avg/month',
+    'year.title':'{year} in Review','year.total':'Year total','year.receipts':'Receipts','year.avg_month':'Avg/month',
     'year.top_cat':'Top category','year.top_month':'📈 Most expensive month',
     'welcome.title':'Welcome to Slippy','welcome.sub':'The smartest way to track daily expenses.',
     'welcome.step1':'Photograph a receipt with the camera',
@@ -995,6 +995,22 @@ async function analyzeWithAI() {
     if (mt && data.total != null) mt.value = Number(data.total).toFixed(2);
     if (md && data.date)   md.value = data.date;
     if (mn && data.store)  autoCategory(data.store);
+
+    if (data.items?.length > 0) {
+      const container = document.getElementById('items-rows');
+      if (container) {
+        container.innerHTML = '';
+        data.items.forEach((it, i) => {
+          const row = document.createElement('div');
+          row.className = 'frow';
+          row.style.gap = '8px';
+          row.innerHTML = `
+            <input class="finp" style="text-align:left;flex:1" placeholder="${t('form.product_ph')}" id="itn${i}" value="${esc(it.name || '')}"/>
+            <input class="finp" style="width:72px;text-align:right" type="number" step="0.01" placeholder="0.00" id="ita${i}" inputmode="decimal" value="${it.price != null ? Number(it.price).toFixed(2) : ''}"/>`;
+          container.appendChild(row);
+        });
+      }
+    }
 
     if (btn) { btn.textContent = t('btn.prefilled'); btn.style.color = 'var(--green,#34C759)'; }
     toast(t('toast.prefilled'));
@@ -1505,7 +1521,7 @@ function renderYearlySection() {
 
   return `
   <div class="card yearly-card">
-    <div class="yearly-hdr">${t('year.receipts')} ${year}</div>
+    <div class="yearly-hdr">${t('year.title', {year})}</div>
     <div class="yearly-stats">
       <div class="ys-item">
         <div class="ys-val">${fmt(yearTotal)}</div>
