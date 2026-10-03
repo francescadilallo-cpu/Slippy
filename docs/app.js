@@ -471,6 +471,7 @@ const LANG = {
     'toast.csv_exported':'CSV esportato!','toast.csv_invalid':'File CSV vuoto o non valido.',
     'toast.csv_format':'Formato CSV non riconosciuto.','toast.csv_none':'Nessun nuovo scontrino trovato.',
     'toast.csv_error':'Errore durante l\'importazione.','toast.data_deleted':'Dati eliminati',
+    'toast.template_downloaded':'Template scaricato!',
     'toast.no_advice':'Nessun consiglio disponibile.','toast.invalid_response':'Risposta non valida',
     'dash.spending':'Spesa totale','dash.receipts':'Scontrini','dash.average':'Media',
     'dash.categories':'Categorie','dash.top_stores':'Top Negozi del Mese',
@@ -493,7 +494,7 @@ const LANG = {
     'rx.search_ph':'Cerca scontrini…',
     'set.currency':'Valuta','set.budget':'Budget Mensile','set.budget_lbl':'{sym} Budget mensile',
     'set.claude':'Claude API Key','set.ai':'AI (Opzionale)','set.data':'Dati','set.info':'Informazioni',
-    'set.export':'Esporta CSV','set.import':'Importa CSV','set.delete_all':'Cancella tutti i dati',
+    'set.export':'Esporta CSV','set.import':'Importa CSV','set.template':'Scarica Template','set.delete_all':'Cancella tutti i dati',
     'set.version':'Versione','set.language':'Lingua','set.ai_engine':'Analisi AI',
     'set.currency_note':'Usata in tutti i totali e nel budget.',
     'set.budget_note':'Imposta un budget mensile per monitorare la spesa nella Dashboard.',
@@ -561,6 +562,7 @@ const LANG = {
     'toast.csv_exported':'CSV exported!','toast.csv_invalid':'CSV file empty or invalid.',
     'toast.csv_format':'CSV format not recognised.','toast.csv_none':'No new receipts found.',
     'toast.csv_error':'Error during import.','toast.data_deleted':'Data deleted',
+    'toast.template_downloaded':'Template downloaded!',
     'toast.no_advice':'No advice available.','toast.invalid_response':'Invalid response',
     'dash.spending':'Total spending','dash.receipts':'Receipts','dash.average':'Average',
     'dash.categories':'Categories','dash.top_stores':'Top Stores This Month',
@@ -583,7 +585,7 @@ const LANG = {
     'rx.search_ph':'Search receipts…',
     'set.currency':'Currency','set.budget':'Monthly Budget','set.budget_lbl':'{sym} Monthly budget',
     'set.claude':'Claude API Key','set.ai':'AI (Optional)','set.data':'Data','set.info':'Information',
-    'set.export':'Export CSV','set.import':'Import CSV','set.delete_all':'Delete all data',
+    'set.export':'Export CSV','set.import':'Import CSV','set.template':'Download Template','set.delete_all':'Delete all data',
     'set.version':'Version','set.language':'Language','set.ai_engine':'AI Analysis',
     'set.currency_note':'Used in all totals and budget.',
     'set.budget_note':'Set a monthly budget to monitor spending in the Dashboard.',
@@ -2002,6 +2004,10 @@ function renderSettings() {
       <span class="slbl">${t('set.import')}</span>
       <span class="sval">${t('misc.restore')}</span>
     </div>
+    <div class="srow si-row" style="cursor:pointer" onclick="downloadTemplate()">
+      <div class="si-ico" style="background:#5856D622">📋</div>
+      <span class="slbl">${t('set.template')}</span>
+    </div>
     <input type="file" id="csv-import-inp" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(this)"/>
     <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'clearAllData()' : ''}">
       <div class="si-ico" style="background:#FF3B3022">🗑️</div>
@@ -2084,29 +2090,41 @@ function saveGeminiKey() {
   toast(v ? t('toast.gemini_saved') : t('toast.gemini_removed'));
   renderSettings();
 }
+function csvQ(s) { return `"${String(s || '').replace(/"/g, '""')}"`; }
+function downloadCSVBlob(content, filename) {
+  const bom = '﻿';
+  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
 function exportCSV() {
   if (!state.receipts.length) return;
-  const rows = [['ID','Store','Total (€)','Date','Category','Items'].join(',')];
+  const header = ['ID','Store','Total','Currency','Date','Category','Items','Notes'];
+  const rows = [header.join(',')];
   state.receipts.forEach(r => {
     rows.push([
       r.id,
-      `"${(r.storeName || '').replace(/"/g, '""')}"`,
+      csvQ(r.storeName),
       (r.totalAmount || 0).toFixed(2),
+      state.settings.currency || 'EUR',
       r.date || '',
-      catById(r.category).name,
-      `"${(r.items || []).map(i => i.name).join('; ').replace(/"/g, '""')}"`,
+      r.category || 'other',
+      csvQ((r.items || []).map(i => i.price != null ? `${i.name}:${Number(i.price).toFixed(2)}` : i.name).join('; ')),
+      csvQ(r.notes),
     ].join(','));
   });
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `slippy-export-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadCSVBlob(rows.join('\n'), `slippy-export-${new Date().toISOString().slice(0, 10)}.csv`);
   toast(t('toast.csv_exported'));
+}
+function downloadTemplate() {
+  const header = ['ID','Store','Total','Currency','Date','Category','Items','Notes'];
+  const example = ['', csvQ('Esselunga'), '47.30', 'EUR', new Date().toISOString().split('T')[0], 'groceries', csvQ('Pasta:2.50; Latte:1.20'), csvQ('')];
+  const content = [header.join(','), example.join(',')].join('\n');
+  downloadCSVBlob(content, 'slippy-template.csv');
+  toast(t('toast.template_downloaded'));
 }
 
 function importCSV() {
@@ -2120,29 +2138,44 @@ function handleCSVImport(input) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+      // Strip BOM if present
+      let text = e.target.result;
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
       if (lines.length < 2) { toast(t('toast.csv_invalid')); return; }
-      // Parse header to determine column positions
-      const header = parseCSVRow(lines[0]).map(h => h.toLowerCase());
+      const header = parseCSVRow(lines[0]).map(h => h.toLowerCase().trim());
       const idIdx    = header.indexOf('id');
       const storeIdx = header.indexOf('store');
       const totalIdx = header.findIndex(h => h.includes('total'));
       const dateIdx  = header.indexOf('date');
       const catIdx   = header.indexOf('category');
+      const itemsIdx = header.indexOf('items');
+      const notesIdx = header.indexOf('notes');
       if (storeIdx < 0 || totalIdx < 0) { toast(t('toast.csv_format')); return; }
 
+      const validCatIds = new Set(CATS.map(c => c.id));
       const existing = new Set(state.receipts.map(r => r.id));
       let added = 0;
       lines.slice(1).forEach(line => {
         const cols  = parseCSVRow(line);
-        const id    = idIdx >= 0 ? (cols[idIdx] || uid()) : uid();
-        const store = cols[storeIdx] || 'Negozio';
-        const total = parseFloat(cols[totalIdx] || '0') || 0;
-        const date  = dateIdx >= 0 ? cols[dateIdx] : new Date().toISOString().split('T')[0];
+        const id    = (idIdx >= 0 && cols[idIdx]) ? cols[idIdx] : uid();
         if (existing.has(id)) return;
+        const store = cols[storeIdx] || t('misc.store');
+        const total = parseFloat((cols[totalIdx] || '0').replace(',', '.')) || 0;
+        const today = new Date().toISOString().split('T')[0];
+        const date  = dateIdx >= 0 && cols[dateIdx] ? cols[dateIdx] : today;
+        const rawCat = catIdx >= 0 ? (cols[catIdx] || '').toLowerCase().trim() : '';
+        const category = validCatIds.has(rawCat) ? rawCat : 'other';
+        const itemsRaw = itemsIdx >= 0 ? (cols[itemsIdx] || '') : '';
+        const items = itemsRaw
+          ? itemsRaw.split(';').map(s => s.trim()).filter(Boolean).map(s => {
+              const [name, price] = s.split(':');
+              return { name: name.trim(), price: price ? parseFloat(price.trim()) : undefined };
+            })
+          : [];
+        const notes = notesIdx >= 0 ? (cols[notesIdx] || '') : '';
         existing.add(id);
-        state.receipts.push({ id, storeName: store, totalAmount: total, date,
-          category: 'other', items: [], createdAt: date });
+        state.receipts.push({ id, storeName: store, totalAmount: total, date, category, items, notes, createdAt: date });
         added++;
       });
 
@@ -2151,14 +2184,15 @@ function handleCSVImport(input) {
         renderDashboard();
         renderReceipts();
         renderSettings();
-        toast(state.settings.lang === 'en' ? `${added} receipt${added===1?'':'s'} imported!` : `${added} scontrin${added===1?'o':'i'} importat${added===1?'o':'i'}!`);
+        const s = state.settings.lang === 'en' ? (added===1?'':'s') : (added===1?'o':'i');
+        toast(t('misc.import_ok', {n: added, s}));
       } else {
         toast(t('toast.csv_none'));
       }
     } catch(_) { toast(t('toast.csv_error')); }
     input.value = '';
   };
-  reader.readAsText(file);
+  reader.readAsText(file, 'UTF-8');
 }
 
 function parseCSVRow(line) {
