@@ -2140,7 +2140,7 @@ function exportCSV() {
       r.date || '',
       r.category || 'other',
       csvQ((r.items || []).map(i => i.price != null ? `${i.name}:${Number(i.price).toFixed(2)}` : i.name).join('; ')),
-      csvQ(r.notes),
+      csvQ(r.note || r.notes),
     ].join(','));
   });
   downloadCSVBlob(rows.join('\n'), `slippy-export-${new Date().toISOString().slice(0, 10)}.csv`);
@@ -2200,9 +2200,9 @@ function handleCSVImport(input) {
               return { name: name.trim(), price: price ? parseFloat(price.trim()) : undefined };
             })
           : [];
-        const notes = notesIdx >= 0 ? (cols[notesIdx] || '') : '';
+        const note = notesIdx >= 0 ? (cols[notesIdx] || '') : '';
         existing.add(id);
-        state.receipts.push({ id, storeName: store, totalAmount: total, date, category, items, notes, createdAt: date });
+        state.receipts.push({ id, storeName: store, totalAmount: total, date, category, items, note: note || undefined, createdAt: date });
         added++;
       });
 
