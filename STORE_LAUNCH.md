@@ -9,7 +9,7 @@
 
 ## iOS project (generated, in `ios/`)
 Capacitor 7 wraps `docs/` (the web app). Native camera + haptics are used automatically inside the app (falls back to the browser in the PWA).
-The original SwiftUI app from the first commit (`App/`, `Views/`, `Slippy.xcodeproj`, ...) is untouched and no longer matches the web app's features. Pick one; recommended: ship the Capacitor build and archive the Swift code.
+The original SwiftUI prototype now lives in `legacy-swift/` (no longer maintained).
 
 ## Steps on a Mac (cannot be done from this Linux environment)
 1. `npm install && npx cap sync ios && npx cap open ios`
