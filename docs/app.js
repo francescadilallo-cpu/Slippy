@@ -80,7 +80,11 @@ function saveLearned()  { localStorage.setItem('slippy_learned',  JSON.stringify
 // ── HELPERS ───────────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function fmt(n) {
-  return '€ ' + Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const code = state.settings.currency || 'EUR';
+  const cur = CURRENCIES.find(c => c.code === code);
+  const locale = { EUR:'it-IT', GBP:'en-GB', USD:'en-US', JPY:'ja-JP', CHF:'de-CH', CAD:'en-CA', AUD:'en-AU', DKK:'da-DK', SEK:'sv-SE', NOK:'nb-NO' }[code] || 'it-IT';
+  const sym = cur?.symbol || code;
+  return sym + '\u00A0' + Number(n || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtDate(iso) {
   if (!iso) return '';
@@ -508,7 +512,8 @@ function _doSaveFromForm(name, total, date, catId, note) {
     id: uid(), storeName: name, totalAmount: total,
     date, createdAt: new Date().toISOString(),
     category: catId, items,
-    imageDataURL: state.pendingPhoto || null,
+    rawText: state.ocrData?.rawText || '',
+    imageDataURL: state.ocrData?.imgDataURL || null,
     note: note || undefined,
   };
 
@@ -516,7 +521,6 @@ function _doSaveFromForm(name, total, date, catId, note) {
   persist();
   if (name) { state.learned[name.toLowerCase()] = catId; saveLearned(); }
 
-  state.pendingPhoto = null;
   haptic('medium');
   closeOverlay('oscanner');
   toast('Scontrino salvato!');
@@ -535,21 +539,9 @@ function openManualEntry() {
   const aiBtn = state.settings.geminiKey
     ? `<button class="btn btn-s" id="ai-btn" onclick="analyzeWithAI()" style="gap:6px;margin-top:4px">✨ Analizza con AI</button>`
     : '';
-
-  // Store autocomplete from past receipts
-  const pastStores = [...new Set(state.receipts.map(r => r.storeName).filter(Boolean))].slice(0, 20);
-  const storeList = pastStores.length
-    ? `<datalist id="store-list">${pastStores.map(s => `<option value="${esc(s)}"/>`).join('')}</datalist>`
-    : '';
-
-  // Dynamic quick-amount chips from recent totals (deduplicated, sorted)
-  const recentAmts = [...new Set(
-    state.receipts.slice(0, 30).map(r => r.totalAmount).filter(v => v > 0 && v < 500)
-  )].sort((a, b) => a - b).slice(0, 6);
-  const qAmts = recentAmts.length >= 3 ? recentAmts : [5, 10, 15, 20, 30, 50];
   openOverlay('oscanner', `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('oscanner')">✕</button>
+    <button class="back-btn" onclick="closeOverlay('oscanner')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     <h2>Nuovo Scontrino</h2>
     <button class="nav-act" onclick="saveManualEntry()">Salva</button>
   </div>
@@ -560,16 +552,17 @@ function openManualEntry() {
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           <span style="font-size:13px">Aggiungi foto scontrino (opzionale)</span>
         </div>
-        <img id="photo-preview" src="" alt="" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:8px"/>
+        <div id="photo-preview-wrap" style="display:none;position:relative;width:100%">
+          <img id="photo-preview" src="" alt="" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;display:block"/>
+          <button onclick="event.stopPropagation();removePendingPhoto()" aria-label="Rimuovi foto" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;font-size:15px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</button>
+        </div>
       </div>
     </div>
     <div class="fsec">
       <div class="fhdr">Negozio</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="mn"
-          placeholder="Nome negozio" oninput="autoCategory(this.value)" autofocus
-          list="store-list" autocomplete="off"/>
-      ${storeList}
+          placeholder="Nome negozio" oninput="autoCategory(this.value)" autofocus/>
       </div>
     </div>
     <div class="fsec">
@@ -580,7 +573,7 @@ function openManualEntry() {
           placeholder="0.00" inputmode="decimal"/>
       </div>
       <div class="qa-row">
-        ${qAmts.map(v => `<button type="button" class="qa-chip" onclick="setQuickAmt('mt',${v})">${currSym()}${Number(v).toLocaleString('it-IT',{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2})}</button>`).join('')}
+        ${[5,10,15,20,30,50].map(v => `<button type="button" class="qa-chip" onclick="setQuickAmt('mt',${v})">${currSym()}${v}</button>`).join('')}
       </div>
     </div>
     <div class="fsec">
@@ -711,8 +704,10 @@ function openPhotoOptions() {
 function removePendingPhoto() {
   state.pendingPhoto = null;
   const prev = document.getElementById('photo-preview');
+  const wrap = document.getElementById('photo-preview-wrap');
   const ph = document.getElementById('photo-placeholder');
-  if (prev) { prev.src = ''; prev.style.display = 'none'; }
+  if (prev) prev.src = '';
+  if (wrap) wrap.style.display = 'none';
   if (ph) ph.style.display = 'flex';
 }
 
@@ -784,7 +779,7 @@ function setupSwipe() {
 
     lrow.addEventListener('touchstart', e => {
       startX = e.touches[0].clientX;
-      currentX = 0;
+      currentX = lrow.dataset.revealed === '1' ? -80 : 0;
       dragging = true;
       lrow.style.transition = 'none';
     }, { passive: true });
@@ -792,7 +787,11 @@ function setupSwipe() {
     lrow.addEventListener('touchmove', e => {
       if (!dragging) return;
       const dx = e.touches[0].clientX - startX;
-      currentX = Math.min(0, dx); // only left
+      if (lrow.dataset.revealed === '1') {
+        currentX = Math.min(0, -80 + dx);
+      } else {
+        currentX = Math.min(0, dx);
+      }
       lrow.style.transform = `translateX(${currentX}px)`;
     }, { passive: true });
 
@@ -800,7 +799,7 @@ function setupSwipe() {
       if (!dragging) return;
       dragging = false;
       lrow.style.transition = 'transform .25s ease';
-      if (currentX < -60) {
+      if (currentX < -40) {
         lrow.style.transform = 'translateX(-80px)';
         lrow.dataset.revealed = '1';
         haptic('medium');
@@ -1352,12 +1351,12 @@ function renderDashboard() {
       <p class="welcome-sub">Il modo più intelligente di tracciare le spese quotidiane.</p>
     </div>
     <div class="card welcome-steps">
-      <div class="ws-row"><span class="ws-num">1</span><div><strong>Tocca +</strong> e inserisci negozio, importo e data</div></div>
-      <div class="ws-row"><span class="ws-num">2</span><div><strong>Allega la foto</strong> dello scontrino come riferimento</div></div>
-      <div class="ws-row"><span class="ws-num">3</span><div><strong>Analizza</strong> le spese mensili con grafici e AI</div></div>
+      <div class="ws-row"><span class="ws-num">1</span><div><strong>Fotografa</strong> uno scontrino con la fotocamera</div></div>
+      <div class="ws-row"><span class="ws-num">2</span><div><strong>Slippy legge</strong> importo e negozio automaticamente</div></div>
+      <div class="ws-row"><span class="ws-num">3</span><div><strong>Analizza</strong> le spese mensili con AI integrata</div></div>
     </div>
     <button class="welcome-cta" onclick="document.getElementById('fab').click()">Aggiungi il primo scontrino →</button>
-    ${!state.settings.apiKey && !state.settings.geminiKey ? `<p class="welcome-hint">💡 Aggiungi una chiave API nelle Impostazioni per sbloccare l'analisi AI.</p>` : ''}
+    ${!state.settings.apiKey ? `<p class="welcome-hint">💡 Aggiungi una chiave API Claude nelle Impostazioni per sbloccare l'analisi AI.</p>` : ''}
   </div>` : '';
 
   const weekSection    = renderWeekSection(state.receipts);
@@ -1399,12 +1398,12 @@ function renderDashboard() {
     <div class="nudge-arr">›</div>
   </div>` : '';
 
-  const nudgeAI = (!state.settings.apiKey && !state.settings.geminiKey && thisRx.length >= 5 && sameMonth(mo, new Date())) ? `
+  const nudgeAI = (!state.settings.apiKey && thisRx.length >= 5 && sameMonth(mo, new Date())) ? `
   <div class="card nudge-card" onclick="gotoTab('s')">
     <div class="nudge-ico">✦</div>
     <div class="nudge-body">
       <div class="nudge-title">Sblocca l'analisi AI</div>
-      <div class="nudge-sub">Aggiungi una API key Claude o Gemini per ricevere consigli personalizzati.</div>
+      <div class="nudge-sub">Aggiungi la tua API key Claude per ricevere consigli personalizzati.</div>
     </div>
     <div class="nudge-arr">›</div>
   </div>` : '';
@@ -1617,7 +1616,13 @@ function buildDetailHTML(id) {
     </div>
   </div>` : '';
 
-  const rawHTML = '';
+  const rawHTML = r.rawText ? `
+  <div class="det-sec">
+    <h3>Testo OCR</h3>
+    <div class="card" style="padding:12px 16px">
+      <pre style="font-size:11px;white-space:pre-wrap;color:var(--lbl2);font-family:'Menlo',monospace;line-height:1.5">${esc(r.rawText)}</pre>
+    </div>
+  </div>` : '';
 
   const existingTip = state.aiTips[id];
   const tipHTML = existingTip
@@ -1627,7 +1632,7 @@ function buildDetailHTML(id) {
 
   return `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('odetail')">‹ Indietro</button>
+    <button class="back-btn" onclick="closeOverlay('odetail')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Indietro</button>
     <h2>Scontrino</h2>
     <div style="display:flex;gap:6px;align-items:center">
       <button class="back-btn share-btn" onclick="shareReceipt('${id}')" title="Condividi">
@@ -2034,8 +2039,10 @@ function init() {
     const url = await fileToDataURL(file);
     state.pendingPhoto = url;
     const prev = document.getElementById('photo-preview');
+    const wrap = document.getElementById('photo-preview-wrap');
     const ph = document.getElementById('photo-placeholder');
-    if (prev) { prev.src = url; prev.style.display = 'block'; }
+    if (prev) prev.src = url;
+    if (wrap) wrap.style.display = 'block';
     if (ph) ph.style.display = 'none';
   });
 
@@ -2062,6 +2069,17 @@ function init() {
     sht.style.transition = 'transform .36s cubic-bezier(.4,0,.2,1)';
     const dy = e.changedTouches[0].clientY - _shY;
     if (dy > 72) { closeSheet(); } else { sht.style.transform = 'translateY(0)'; }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('sheet')?.classList.contains('open')) { closeSheet(); }
+      else {
+        const overlays = ['oscanner','oedit','odetail','osettings','ostats'];
+        const open = overlays.find(id => document.getElementById(id)?.classList.contains('on'));
+        if (open) closeOverlay(open);
+      }
+    }
   });
 
   renderDashboard();
