@@ -1926,6 +1926,13 @@ function renderSettings() {
   el.innerHTML = `
   <div class="nav"><h1>${t('tab.settings')}</h1></div>
   <div class="ssel">
+    <div class="sshdr">${t('set.language')}</div>
+    <div style="display:flex;gap:8px;padding:4px 0 8px">
+      <button class="btn ${state.settings.lang === 'it' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:12px;font-size:15px;margin:0" onclick="changeLang('it')">🇮🇹 Italiano</button>
+      <button class="btn ${state.settings.lang === 'en' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:12px;font-size:15px;margin:0" onclick="changeLang('en')">🇬🇧 English</button>
+    </div>
+  </div>
+  <div class="ssel">
     <div class="sshdr">${t('set.currency')}</div>
     <div class="cur-grid">
       ${CURRENCIES.map(c => `
