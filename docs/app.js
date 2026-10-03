@@ -4,39 +4,39 @@
 
 // ── CATEGORIES ───────────────────────────────────────────────
 const CATS = [
-  { id:'groceries',   name:'Alimentari',    icon:'🛒', color:'#30D158',
+  { id:'groceries', nameEn:'Groceries',   name:'Alimentari',    icon:'🛒', color:'#30D158',
     kw:['supermercato','esselunga','carrefour','coop','lidl','aldi','pam','despar','conad','sigma','bennet','sma','eurospin','penny','tigros','famila','ipercoop','iper','simply','selex','alimentari','grocery','market','frutta','verdura','macelleria','panetteria','panificio','forno'] },
-  { id:'restaurants', name:'Ristoranti',    icon:'🍽️', color:'#FF9500',
+  { id:'restaurants', nameEn:'Restaurants', name:'Ristoranti',    icon:'🍽️', color:'#FF9500',
     kw:['ristorante','trattoria','osteria','pizzeria','bar ','caffè','café','restaurant','bistro','mcdonald','burger','kebab','sushi','piadineria','gelateria','pasticceria','bakery','coffee','starbucks','autogrill','self service'] },
-  { id:'pharmacy',    name:'Farmacia',      icon:'💊', color:'#FF3B30',
+  { id:'pharmacy', nameEn:'Pharmacy',    name:'Farmacia',      icon:'💊', color:'#FF3B30',
     kw:['farmacia','pharmacy','parafarmacia','medical','salute','sanitá','lloyds','boots','docto'] },
-  { id:'fuel',        name:'Carburante',    icon:'⛽', color:'#FF6B00',
+  { id:'fuel', nameEn:'Fuel',        name:'Carburante',    icon:'⛽', color:'#FF6B00',
     kw:['eni','agip','q8','ip ','shell','tamoil','total','bp ','benzina','carburante','fuel','petrol','diesel','stazione di servizio','distributore'] },
-  { id:'transport',   name:'Trasporti',     icon:'🚆', color:'#34AADC',
+  { id:'transport', nameEn:'Transport',   name:'Trasporti',     icon:'🚆', color:'#34AADC',
     kw:['trenitalia','italo','flixbus','atm ','atac','bus','metro','taxi','uber','parking','parcheggio','autostrada','telepass','aeroporto','airport','ryanair','easyjet','alitalia','ita airways','volo','biglietto'] },
-  { id:'shopping',    name:'Shopping',      icon:'🛍️', color:'#007AFF',
+  { id:'shopping', nameEn:'Shopping',    name:'Shopping',      icon:'🛍️', color:'#007AFF',
     kw:['amazon','zalando','h&m','zara','ikea','obi','leroy','bricofer','brico','decathlon','tiger','primark','shein','aliexpress','ebay','shopping','centrocommerciale'] },
-  { id:'clothing',    name:'Abbigliamento', icon:'👗', color:'#AF52DE',
+  { id:'clothing', nameEn:'Clothing',    name:'Abbigliamento', icon:'👗', color:'#AF52DE',
     kw:['abbigliamento','moda','clothing','fashion','boutique','sartoria','calzature','scarpe','bershka','pull&bear','mango','massimo dutti','lacoste','nike','adidas','footlocker'] },
-  { id:'electronics', name:'Elettronica',   icon:'📱', color:'#5856D6',
+  { id:'electronics', nameEn:'Electronics', name:'Elettronica',   icon:'📱', color:'#5856D6',
     kw:['mediaworld','euronics','unieuro','apple','fnac','trony','electronics','informatica','tech','samsung','google','microsoft','iphone','ipad','computer','laptop','telefono'] },
-  { id:'health',      name:'Salute & Sport', icon:'🏋️', color:'#64D2FF',
+  { id:'health', nameEn:'Health & Sport',      name:'Salute & Sport', icon:'🏋️', color:'#64D2FF',
     kw:['palestra','gym','fitness','sport','piscina','wellness','spa','fisioterapia','dentista','oculista','medico','clinica','ospedale','visita','analisi','decathlon sport','running'] },
-  { id:'other',       name:'Altro',         icon:'📁', color:'#8E8E93', kw:[] },
+  { id:'other', nameEn:'Other',       name:'Altro',         icon:'📁', color:'#8E8E93', kw:[] },
 ];
 
 // ── CURRENCIES ───────────────────────────────────────────────
 const CURRENCIES = [
-  { code:'EUR', symbol:'€',   name:'Euro' },
-  { code:'USD', symbol:'$',   name:'Dollaro USA' },
-  { code:'GBP', symbol:'£',   name:'Sterlina' },
-  { code:'CHF', symbol:'CHF', name:'Franco Svizzero' },
-  { code:'JPY', symbol:'¥',   name:'Yen Giapponese' },
-  { code:'CAD', symbol:'CA$', name:'Dollaro Canadese' },
-  { code:'AUD', symbol:'A$',  name:'Dollaro Australiano' },
-  { code:'DKK', symbol:'kr',  name:'Corona Danese' },
-  { code:'SEK', symbol:'kr',  name:'Corona Svedese' },
-  { code:'NOK', symbol:'kr',  name:'Corona Norvegese' },
+  { code:'EUR', nameEn:'Euro', symbol:'€',   name:'Euro' },
+  { code:'USD', nameEn:'US Dollar', symbol:'$',   name:'Dollaro USA' },
+  { code:'GBP', nameEn:'Pound Sterling', symbol:'£',   name:'Sterlina' },
+  { code:'CHF', nameEn:'Swiss Franc', symbol:'CHF', name:'Franco Svizzero' },
+  { code:'JPY', nameEn:'Japanese Yen', symbol:'¥',   name:'Yen Giapponese' },
+  { code:'CAD', nameEn:'Canadian Dollar', symbol:'CA$', name:'Dollaro Canadese' },
+  { code:'AUD', nameEn:'Australian Dollar', symbol:'A$',  name:'Dollaro Australiano' },
+  { code:'DKK', nameEn:'Danish Krone', symbol:'kr',  name:'Corona Danese' },
+  { code:'SEK', nameEn:'Swedish Krona', symbol:'kr',  name:'Corona Svedese' },
+  { code:'NOK', nameEn:'Norwegian Krone', symbol:'kr',  name:'Corona Norvegese' },
 ];
 function currSym() {
   const code = state.settings.currency || 'EUR';
@@ -48,7 +48,7 @@ const state = {
   tab: 'd',
   dashMonth: new Date(),
   receipts: [],
-  settings: { apiKey: '', budget: 0, currency: 'EUR', geminiKey: '' },
+  settings: { apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it' },
   learned: {},
   ocrData: null,
   pendingPhoto: null,
@@ -68,10 +68,10 @@ function loadStorage() {
   try {
     state.receipts = JSON.parse(localStorage.getItem('slippy_receipts') || '[]');
     const saved = JSON.parse(localStorage.getItem('slippy_settings') || '{"apiKey":""}');
-    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '' }, saved);
+    state.settings = Object.assign({ apiKey: '', budget: 0, currency: 'EUR', geminiKey: '', lang: 'it' }, saved);
     state.learned  = JSON.parse(localStorage.getItem('slippy_learned')  || '{}');
   } catch(_) {
-    state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR' }; state.learned = {};
+    state.receipts = []; state.settings = { apiKey: '', budget: 0, currency: 'EUR', lang: 'it' }; state.learned = {};
   }
 }
 function saveSettings() { localStorage.setItem('slippy_settings', JSON.stringify(state.settings)); }
@@ -90,7 +90,7 @@ function fmtDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('it-IT', { day:'2-digit', month:'short', year:'numeric' });
 }
-function monthLabel(d) { return d.toLocaleDateString('it-IT', { month:'long', year:'numeric' }); }
+function monthLabel(d) { return d.toLocaleDateString(state.settings.lang === 'en' ? 'en-GB' : 'it-IT', { month:'long', year:'numeric' }); }
 function isFutureMonth(d) {
   const now = new Date();
   return d.getFullYear() > now.getFullYear() ||
@@ -118,10 +118,10 @@ function groupByDate(receipts) {
   receipts.forEach(r => {
     const d = new Date(r.date || r.createdAt);
     let g;
-    if      (d.toDateString() === todayStr)     g = 'Oggi';
-    else if (d.toDateString() === yesterdayStr) g = 'Ieri';
-    else if (now - d < 7 * 86400000)            g = 'Questa Settimana';
-    else if (sameMonth(d, now))                 g = 'Questo Mese';
+    if      (d.toDateString() === todayStr)     g = t('date.today');
+    else if (d.toDateString() === yesterdayStr) g = t('date.yesterday');
+    else if (now - d < 7 * 86400000)            g = t('date.this_week');
+    else if (sameMonth(d, now))                 g = t('date.this_month');
     else {
       g = d.toLocaleDateString('it-IT', { month:'long', year:'numeric' });
       g = g[0].toUpperCase() + g.slice(1);
@@ -152,7 +152,7 @@ function renderTopStoresSection(thisRx) {
   if (thisRx.length < 3) return '';
   const storeMap = {};
   thisRx.forEach(r => {
-    const s = r.storeName || 'Negozio';
+    const s = r.storeName || t('misc.store');
     if (!storeMap[s]) storeMap[s] = { count: 0, total: 0, cat: r.category };
     storeMap[s].count++;
     storeMap[s].total += r.totalAmount || 0;
@@ -164,7 +164,7 @@ function renderTopStoresSection(thisRx) {
   const medals = ['🥇','🥈','🥉',''];
   return `
   <div class="card top-stores-card">
-    <div class="ts-title">Top Negozi del Mese <span style="font-size:9px;opacity:.5;font-weight:400;text-transform:none">· tocca per cercare</span></div>
+    <div class="ts-title">${t('dash.top_stores')} <span style="font-size:9px;opacity:.5;font-weight:400;text-transform:none">${t('dash.top_stores_tap')}</span></div>
     ${sorted.map(([name, data], i) => {
       const cat = catById(data.cat);
       return `
@@ -173,7 +173,7 @@ function renderTopStoresSection(thisRx) {
         <span class="ts-ico">${cat.icon}</span>
         <div class="ts-info">
           <div class="ts-name">${esc(name)}</div>
-          <div class="ts-meta">${data.count} ${data.count === 1 ? 'visita' : 'visite'}</div>
+          <div class="ts-meta">${data.count} ${data.count === 1 ? t('misc.visits_one') : t('misc.visits_many')}</div>
         </div>
         <div class="ts-amt">${fmt(data.total)}</div>
       </div>`;
@@ -187,18 +187,18 @@ async function shareReceipt(id) {
   if (!r) return;
   const cat = catById(r.category);
   const text = [
-    `${cat.icon} ${r.storeName || 'Negozio'}`,
-    `${fmtDate(r.date || r.createdAt)} · ${cat.name}`,
-    `Totale: ${fmt(r.totalAmount || 0)}`,
+    `${cat.icon} ${r.storeName || t('misc.store')}`,
+    `${fmtDate(r.date || r.createdAt)} · ${catName(cat)}`,
+    `${t('share.receipt_total')} ${fmt(r.totalAmount || 0)}`,
     r.note ? `📝 ${r.note}` : '',
   ].filter(Boolean).join('\n');
 
   if (navigator.share) {
     try { await navigator.share({ title: 'Slippy', text }); haptic('light'); }
-    catch(e) { if (e.name !== 'AbortError') toast('Impossibile condividere'); }
+    catch(e) { if (e.name !== 'AbortError') toast(t('toast.cant_share')); }
   } else {
-    try { await navigator.clipboard.writeText(text); toast('Copiato negli appunti!'); }
-    catch(e) { toast('Condivisione non supportata'); }
+    try { await navigator.clipboard.writeText(text); toast(t('toast.copied')); }
+    catch(e) { toast(t('toast.no_share')); }
   }
 }
 
@@ -213,16 +213,16 @@ async function shareMonthSummary(moKey) {
   rx.forEach(r => { catTotals[r.category] = (catTotals[r.category] || 0) + (r.totalAmount || 0); });
   const topCats = Object.entries(catTotals)
     .sort((a, b) => b[1] - a[1]).slice(0, 3)
-    .map(([id, amt]) => { const c = catById(id); return `${c.icon} ${c.name}: ${fmt(amt)}`; });
+    .map(([id, amt]) => { const c = catById(id); return `${c.icon} ${catName(c)}: ${fmt(amt)}`; });
 
   const text = [
-    `📊 Riepilogo ${monthLabel(mo)}`,
+    `📊 ${t('share.summary', {month: monthLabel(mo)})}`,
     ``,
-    `Spesa totale: ${fmt(total)}`,
-    `Scontrini: ${rx.length}`,
-    `Media: ${fmt(total / rx.length)}`,
+    `${t('share.total')} ${fmt(total)}`,
+    `${t('share.receipts')} ${rx.length}`,
+    `${t('share.average')} ${fmt(total / rx.length)}`,
     ``,
-    `Per categoria:`,
+    `${t('share.by_cat')}`,
     ...topCats,
     ``,
     `— Slippy`,
@@ -230,10 +230,10 @@ async function shareMonthSummary(moKey) {
 
   haptic('light');
   if (navigator.share) {
-    try { await navigator.share({ title: `Spese ${monthLabel(mo)}`, text }); }
+    try { await navigator.share({ title: t('share.title', {month: monthLabel(mo)}), text }); }
     catch(e) { if (e.name !== 'AbortError') toast('Impossibile condividere'); }
   } else {
-    try { await navigator.clipboard.writeText(text); toast('Riepilogo copiato!'); }
+    try { await navigator.clipboard.writeText(text); toast(t('toast.summary_copied')); }
     catch(e) { toast('Condivisione non supportata'); }
   }
 }
@@ -254,14 +254,14 @@ function renderForecastSection(thisRx, mo) {
   const color = overBudget ? 'var(--red)' : 'var(--accent)';
   return `
   <div class="card forecast-card">
-    <div class="forecast-lbl">Proiezione Fine Mese</div>
+    <div class="forecast-lbl">${t('dash.forecast')}</div>
     <div class="forecast-main">
       <div class="forecast-amt" style="color:${color}">${fmt(projected)}</div>
-      <div class="forecast-rate">${fmt(dailyRate)}<span>/giorno</span></div>
+      <div class="forecast-rate">${fmt(dailyRate)}<span>${t('dash.per_day')}</span></div>
     </div>
     <div class="forecast-sub">
-      ${fmt(Math.round(dailyRate * daysLeft))} nei prossimi ${daysLeft} giorni
-      ${overBudget ? `<span style="color:var(--red);font-weight:600"> · sopra budget</span>` : ''}
+      ${t('misc.next_days', {amount: fmt(Math.round(dailyRate * daysLeft)), n: daysLeft})}
+      ${overBudget ? `<span style="color:var(--red);font-weight:600"> ${t('misc.over_budget_dot')}</span>` : ''}
     </div>
   </div>`;
 }
@@ -285,12 +285,12 @@ function calcStreak() {
 // ── AI MONTHLY ANALYSIS ───────────────────────────────────────
 async function fetchMonthlyAnalysis(monthKey) {
   const key = state.settings.apiKey;
-  if (!key) { toast('Aggiungi la tua API key Claude nelle Impostazioni'); return; }
+  if (!key) { toast(t('toast.need_claude_key')); return; }
 
   state.monthlyAnalysis[monthKey] = { loading: true };
   const card = document.getElementById('dash-ai-card');
   if (card) card.innerHTML = `
-    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Analisi Mensile AI</h3><span class="ai-badge">Claude</span></div>
+    <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>${t('dash.ai_monthly')}</h3><span class="ai-badge">Claude</span></div>
     <div class="spin" style="width:26px;height:26px;border-width:3px;margin:12px auto"></div>`;
 
   try {
@@ -303,8 +303,10 @@ async function fetchMonthlyAnalysis(monthKey) {
     const catLines = Object.entries(catMap).sort((a,b)=>b[1]-a[1])
       .map(([k,v]) => `${catById(k).icon} ${catById(k).name}: ${fmt(v)}`).join(', ');
 
-    const prompt = `Sei un consulente finanziario. Analizza queste spese di ${monthLabel(mo)} in italiano e rispondi con esattamente 3 bullet point (•) brevi e pratici, max 80 parole totali:
-Totale: ${fmt(total)} | ${rx.length} scontrini | ${catLines}`;
+    const isEn = state.settings.lang === 'en';
+    const prompt = isEn
+      ? `You are a financial advisor. Analyse these expenses for ${monthLabel(mo)} and reply with exactly 3 short practical bullet points (•), max 80 words total:\nTotal: ${fmt(total)} | ${rx.length} receipts | ${catLines}`
+      : `Sei un consulente finanziario. Analizza queste spese di ${monthLabel(mo)} in italiano e rispondi con esattamente 3 bullet point (•) brevi e pratici, max 80 parole totali:\nTotale: ${fmt(total)} | ${rx.length} scontrini | ${catLines}`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -331,7 +333,7 @@ Totale: ${fmt(total)} | ${rx.length} scontrini | ${catLines}`;
     if (card) card.innerHTML = `
       <div class="ai-hdr"><span style="font-size:16px">✦</span><h3>Analisi Mensile AI</h3><span class="ai-badge">Claude</span></div>
       <p style="font-size:13px;color:var(--red);margin-bottom:8px">${esc(err.message)}</p>
-      <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">Riprova</button>`;
+      <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">${t('btn.retry')}</button>`;
   }
 }
 
@@ -351,7 +353,7 @@ function confirmSheet(message, label, cb, danger = true) {
     <div style="font-size:16px;font-weight:600;text-align:center;padding:0 16px 4px;color:var(--lbl);line-height:1.45">${esc(message)}</div>
     <div class="scan-btns" style="margin-top:18px">
       <button class="btn ${danger ? 'btn-d' : 'btn-p'}" onclick="_runConfirm()">${esc(label)}</button>
-      <button class="btn btn-s" onclick="closeSheet()">Annulla</button>
+      <button class="btn btn-s" onclick="closeSheet()">${t('btn.cancel')}</button>
     </div>
   </div>`);
 }
@@ -432,6 +434,207 @@ function autoCategory(storeName) {
   if (sel) sel.value = categorize(storeName);
 }
 
+
+// ── I18N ─────────────────────────────────────────────────────────
+const LANG = {
+  it: {
+    'tab.receipts':'Scontrini','tab.settings':'Impostazioni',
+    'overlay.new_receipt':'Nuovo Scontrino','overlay.receipt':'Scontrino','overlay.edit':'Modifica',
+    'form.store':'Negozio','form.total':'Totale','form.date':'Data','form.category':'Categoria',
+    'form.products':'Prodotti (opzionale)','form.notes_opt':'Note (opzionale)','form.notes':'Note',
+    'form.store_ph':'Nome negozio','form.product_ph':'Nome prodotto','form.note_ph':'Aggiungi una nota…',
+    'form.photo':'Aggiungi foto scontrino (opzionale)','form.add_item':'+ Aggiungi',
+    'btn.save':'Salva','btn.cancel':'Annulla','btn.save_receipt':'Salva Scontrino',
+    'btn.save_changes':'Salva Modifiche','btn.save_anyway':'Salva Comunque',
+    'btn.delete':'Elimina','btn.delete_receipt':'Elimina Scontrino','btn.duplicate':'Duplica Scontrino',
+    'btn.edit':'Modifica','btn.back':'Indietro','btn.camera':'Fotocamera',
+    'btn.library':'Scegli dalla Libreria','btn.remove_photo':'Rimuovi foto',
+    'btn.analyze_ai':'✨ Analizza con AI','btn.analyzing':'⧗ Analisi in corso…',
+    'btn.prefilled':'✓ Pre-compilato','btn.analyze_month':'Analizza questo mese →',
+    'btn.regenerate':'↺ Rigenera','btn.retry':'Riprova','btn.get_advice':'Ottieni consiglio',
+    'btn.show':'Mostra','btn.hide':'Nascondi','btn.remove_key':'Rimuovi Chiave',
+    'btn.save_budget':'Salva Budget',
+    'toast.saved':'Scontrino salvato!','toast.deleted':'Scontrino eliminato',
+    'toast.updated':'Scontrino aggiornato',
+    'toast.duplicated':'Scontrino duplicato — aggiorna data e importo se necessario',
+    'toast.copied':'Copiato negli appunti!','toast.no_share':'Condivisione non supportata',
+    'toast.cant_share':'Impossibile condividere','toast.summary_copied':'Riepilogo copiato!',
+    'toast.need_claude_key':'Aggiungi la tua API key Claude nelle Impostazioni',
+    'toast.need_gemini_key':'Aggiungi la API key Gemini nelle Impostazioni',
+    'toast.need_photo':'Prima aggiungi una foto dello scontrino',
+    'toast.prefilled':'Campi pre-compilati — controlla e salva',
+    'toast.ai_key_error':'Errore AI — API key non valida',
+    'toast.ai_error':'Errore AI — riprova','toast.enter_total':'Inserisci il totale',
+    'toast.api_saved':'API key salvata ✓','toast.api_removed':'API key rimossa',
+    'toast.gemini_saved':'Gemini API key salvata ✓','toast.gemini_removed':'Gemini API key rimossa',
+    'toast.csv_exported':'CSV esportato!','toast.csv_invalid':'File CSV vuoto o non valido.',
+    'toast.csv_format':'Formato CSV non riconosciuto.','toast.csv_none':'Nessun nuovo scontrino trovato.',
+    'toast.csv_error':'Errore durante l\'importazione.','toast.data_deleted':'Dati eliminati',
+    'toast.no_advice':'Nessun consiglio disponibile.','toast.invalid_response':'Risposta non valida',
+    'dash.spending':'Spesa totale','dash.receipts':'Scontrini','dash.average':'Media',
+    'dash.categories':'Categorie','dash.top_stores':'Top Negozi del Mese',
+    'dash.top_stores_tap':'· tocca per cercare','dash.forecast':'Proiezione Fine Mese',
+    'dash.per_day':'/giorno','dash.week':'Questa Settimana','dash.by_category':'Per Categoria',
+    'dash.cat_tap':'· tocca per filtrare','dash.trends':'Tendenze',
+    'dash.last6':'Ultimi 6 Mesi','dash.calendar':'Calendario Spese','dash.budget':'Budget Mensile',
+    'dash.ai_monthly':'Analisi Mensile AI','dash.ai_tip':'Consiglio AI',
+    'dash.ai_desc':'Analisi intelligente delle spese di {month}.',
+    'dash.ai_tip_desc':'Ottieni un consiglio personalizzato per questo scontrino.',
+    'dash.nudge_budget':'Imposta un budget',
+    'dash.nudge_budget_desc':'Monitora quanto stai spendendo rispetto al tuo obiettivo mensile.',
+    'dash.nudge_ai':'Sblocca l\'analisi AI',
+    'dash.nudge_ai_desc':'Aggiungi la tua API key Claude per ricevere consigli personalizzati.',
+    'dash.share':'Condividi riepilogo',
+    'date.today':'Oggi','date.yesterday':'Ieri','date.this_week':'Questa Settimana','date.this_month':'Questo Mese',
+    'rx.filter_all':'Tutti','rx.empty_filtered':'Nessun risultato',
+    'rx.empty_filtered_sub':'Prova a cambiare filtro o ricerca.',
+    'rx.empty':'Nessuno scontrino','rx.empty_sub':'Tocca + per aggiungere il primo scontrino.',
+    'rx.search_ph':'Cerca scontrini…',
+    'set.currency':'Valuta','set.budget':'Budget Mensile','set.budget_lbl':'{sym} Budget mensile',
+    'set.claude':'Claude API Key','set.ai':'AI (Opzionale)','set.data':'Dati','set.info':'Informazioni',
+    'set.export':'Esporta CSV','set.import':'Importa CSV','set.delete_all':'Cancella tutti i dati',
+    'set.version':'Versione','set.language':'Lingua','set.ai_engine':'Analisi AI',
+    'set.currency_note':'Usata in tutti i totali e nel budget.',
+    'set.budget_note':'Imposta un budget mensile per monitorare la spesa nella Dashboard.',
+    'set.claude_note':'Salvata nel browser. Ottieni la tua su console.anthropic.com.',
+    'set.gemini_note':'Gratuita su aistudio.google.com — abilita l\'analisi automatica degli scontrini.',
+    'set.data_note':'I dati sono archiviati localmente sul tuo dispositivo.',
+    'set.tagline':'Fotografa lo scontrino. Conosci la tua spesa.',
+    'confirm.duplicate':'Questo scontrino sembra un duplicato. Salvare comunque?',
+    'confirm.delete_quick':'Eliminare questo scontrino?',
+    'confirm.delete':'Eliminare questo scontrino? Non sarà possibile annullare.',
+    'confirm.delete_all':'Eliminare tutti i {n} scontrini? Non sarà possibile annullare.',
+    'detail.products':'Prodotti','detail.category':'Categoria','detail.view_photo':'Vedi foto',
+    'detail.photo_title':'Foto Scontrino',
+    'share.summary':'Riepilogo {month}','share.total':'Spesa totale:','share.receipts':'Scontrini:',
+    'share.average':'Media:','share.by_cat':'Per categoria:','share.title':'{month} Spese',
+    'share.receipt_total':'Totale:',
+    'year.total':'Totale anno','year.receipts':'Scontrini','year.avg_month':'Media/mese',
+    'year.top_cat':'Categoria principale','year.top_month':'📈 Mese più costoso',
+    'welcome.title':'Benvenuto su Slippy','welcome.sub':'Il modo più intelligente di tracciare le spese quotidiane.',
+    'welcome.step1':'Fotografa uno scontrino con la fotocamera',
+    'welcome.step2':'Slippy legge importo e negozio automaticamente',
+    'welcome.step3':'Analizza le spese mensili con AI integrata',
+    'welcome.cta':'Aggiungi il primo scontrino →',
+    'welcome.ai_hint':'💡 Aggiungi una chiave API Claude nelle Impostazioni per sbloccare l\'analisi AI.',
+    'misc.store':'Negozio','misc.over_budget':'Sopra budget','misc.over_budget_dot':'· sopra budget',
+    'misc.remaining':'{amount} rimanenti','misc.next_days':'{amount} nei prossimi {n} giorni',
+    'misc.restore':'Ripristina','misc.cal_legend':'= spesa','misc.visits_one':'visita','misc.visits_many':'visite',
+    'misc.this_month':'{amount} questo mese','misc.results':'{n} risultat{s} · {amount}',
+    'misc.first_month':'Primo mese tracciato','misc.vs_last':'{dir} {n}% rispetto al mese scorso',
+    'misc.budget_set':'Budget impostato: {amount}/mese','misc.budget_removed':'Budget rimosso',
+    'misc.currency_changed':'Valuta: {sym} {code}','misc.receipt_count':'{n} scontrin{s}',
+    'misc.import_ok':'{n} scontrin{s} importat{s}!',
+  },
+  en: {
+    'tab.receipts':'Receipts','tab.settings':'Settings',
+    'overlay.new_receipt':'New Receipt','overlay.receipt':'Receipt','overlay.edit':'Edit',
+    'form.store':'Store','form.total':'Total','form.date':'Date','form.category':'Category',
+    'form.products':'Products (optional)','form.notes_opt':'Notes (optional)','form.notes':'Notes',
+    'form.store_ph':'Store name','form.product_ph':'Product name','form.note_ph':'Add a note…',
+    'form.photo':'Add receipt photo (optional)','form.add_item':'+ Add',
+    'btn.save':'Save','btn.cancel':'Cancel','btn.save_receipt':'Save Receipt',
+    'btn.save_changes':'Save Changes','btn.save_anyway':'Save Anyway',
+    'btn.delete':'Delete','btn.delete_receipt':'Delete Receipt','btn.duplicate':'Duplicate Receipt',
+    'btn.edit':'Edit','btn.back':'Back','btn.camera':'Camera',
+    'btn.library':'Choose from Library','btn.remove_photo':'Remove photo',
+    'btn.analyze_ai':'✨ Analyse with AI','btn.analyzing':'⧗ Analysing…',
+    'btn.prefilled':'✓ Pre-filled','btn.analyze_month':'Analyse this month →',
+    'btn.regenerate':'↺ Regenerate','btn.retry':'Retry','btn.get_advice':'Get advice',
+    'btn.show':'Show','btn.hide':'Hide','btn.remove_key':'Remove Key',
+    'btn.save_budget':'Save Budget',
+    'toast.saved':'Receipt saved!','toast.deleted':'Receipt deleted',
+    'toast.updated':'Receipt updated',
+    'toast.duplicated':'Receipt duplicated — update date and amount if needed',
+    'toast.copied':'Copied to clipboard!','toast.no_share':'Sharing not supported',
+    'toast.cant_share':'Unable to share','toast.summary_copied':'Summary copied!',
+    'toast.need_claude_key':'Add your Claude API key in Settings',
+    'toast.need_gemini_key':'Add your Gemini API key in Settings',
+    'toast.need_photo':'First add a photo of the receipt',
+    'toast.prefilled':'Fields pre-filled — check and save',
+    'toast.ai_key_error':'AI error — invalid API key',
+    'toast.ai_error':'AI error — try again','toast.enter_total':'Enter the total',
+    'toast.api_saved':'API key saved ✓','toast.api_removed':'API key removed',
+    'toast.gemini_saved':'Gemini API key saved ✓','toast.gemini_removed':'Gemini API key removed',
+    'toast.csv_exported':'CSV exported!','toast.csv_invalid':'CSV file empty or invalid.',
+    'toast.csv_format':'CSV format not recognised.','toast.csv_none':'No new receipts found.',
+    'toast.csv_error':'Error during import.','toast.data_deleted':'Data deleted',
+    'toast.no_advice':'No advice available.','toast.invalid_response':'Invalid response',
+    'dash.spending':'Total spending','dash.receipts':'Receipts','dash.average':'Average',
+    'dash.categories':'Categories','dash.top_stores':'Top Stores This Month',
+    'dash.top_stores_tap':'· tap to search','dash.forecast':'End-of-Month Forecast',
+    'dash.per_day':'/day','dash.week':'This Week','dash.by_category':'By Category',
+    'dash.cat_tap':'· tap to filter','dash.trends':'Trends',
+    'dash.last6':'Last 6 Months','dash.calendar':'Expense Calendar','dash.budget':'Monthly Budget',
+    'dash.ai_monthly':'Monthly AI Analysis','dash.ai_tip':'AI Advice',
+    'dash.ai_desc':'Intelligent analysis of {month} expenses.',
+    'dash.ai_tip_desc':'Get personalised advice for this receipt.',
+    'dash.nudge_budget':'Set a budget',
+    'dash.nudge_budget_desc':'Monitor how much you are spending against your monthly goal.',
+    'dash.nudge_ai':'Unlock AI analysis',
+    'dash.nudge_ai_desc':'Add your Claude API key to receive personalised advice.',
+    'dash.share':'Share summary',
+    'date.today':'Today','date.yesterday':'Yesterday','date.this_week':'This Week','date.this_month':'This Month',
+    'rx.filter_all':'All','rx.empty_filtered':'No results',
+    'rx.empty_filtered_sub':'Try changing the filter or search.',
+    'rx.empty':'No receipts','rx.empty_sub':'Tap + to add the first receipt.',
+    'rx.search_ph':'Search receipts…',
+    'set.currency':'Currency','set.budget':'Monthly Budget','set.budget_lbl':'{sym} Monthly budget',
+    'set.claude':'Claude API Key','set.ai':'AI (Optional)','set.data':'Data','set.info':'Information',
+    'set.export':'Export CSV','set.import':'Import CSV','set.delete_all':'Delete all data',
+    'set.version':'Version','set.language':'Language','set.ai_engine':'AI Analysis',
+    'set.currency_note':'Used in all totals and budget.',
+    'set.budget_note':'Set a monthly budget to monitor spending in the Dashboard.',
+    'set.claude_note':'Saved in browser. Get yours at console.anthropic.com.',
+    'set.gemini_note':'Free at aistudio.google.com — enables automatic receipt analysis.',
+    'set.data_note':'Data is stored locally on your device.',
+    'set.tagline':'Photograph the receipt. Know your spending.',
+    'confirm.duplicate':'This receipt looks like a duplicate. Save anyway?',
+    'confirm.delete_quick':'Delete this receipt?',
+    'confirm.delete':'Delete this receipt? This cannot be undone.',
+    'confirm.delete_all':'Delete all {n} receipts? This cannot be undone.',
+    'detail.products':'Products','detail.category':'Category','detail.view_photo':'View photo',
+    'detail.photo_title':'Receipt Photo',
+    'share.summary':'{month} Summary','share.total':'Total spending:','share.receipts':'Receipts:',
+    'share.average':'Average:','share.by_cat':'By category:','share.title':'{month} Expenses',
+    'share.receipt_total':'Total:',
+    'year.total':'Year total','year.receipts':'Receipts','year.avg_month':'Avg/month',
+    'year.top_cat':'Top category','year.top_month':'📈 Most expensive month',
+    'welcome.title':'Welcome to Slippy','welcome.sub':'The smartest way to track daily expenses.',
+    'welcome.step1':'Photograph a receipt with the camera',
+    'welcome.step2':'Slippy reads amount and store automatically',
+    'welcome.step3':'Analyse monthly expenses with built-in AI',
+    'welcome.cta':'Add the first receipt →',
+    'welcome.ai_hint':'💡 Add a Claude API key in Settings to unlock AI analysis.',
+    'misc.store':'Store','misc.over_budget':'Over budget','misc.over_budget_dot':'· over budget',
+    'misc.remaining':'{amount} remaining','misc.next_days':'{amount} in the next {n} days',
+    'misc.restore':'Restore','misc.cal_legend':'= spend','misc.visits_one':'visit','misc.visits_many':'visits',
+    'misc.this_month':'{amount} this month','misc.results':'{n} result{s} · {amount}',
+    'misc.first_month':'First tracked month','misc.vs_last':'{dir} {n}% vs last month',
+    'misc.budget_set':'Budget set: {amount}/month','misc.budget_removed':'Budget removed',
+    'misc.currency_changed':'Currency: {sym} {code}','misc.receipt_count':'{n} receipt{s}',
+    'misc.import_ok':'{n} receipt{s} imported!',
+  },
+};
+function t(key, vars = {}) {
+  const lang = state?.settings?.lang || 'it';
+  let s = (LANG[lang] || LANG.it)[key];
+  if (s == null) s = LANG.it[key] || key;
+  return s.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? vars[k] : '{' + k + '}');
+}
+function catName(cat) { return (state?.settings?.lang || 'it') === 'en' ? (cat.nameEn || cat.name) : cat.name; }
+function changeLang(lang) {
+  state.settings.lang = lang;
+  saveSettings();
+  const r = document.getElementById('tab-lbl-r');
+  const s = document.getElementById('tab-lbl-s');
+  if (r) r.textContent = t('tab.receipts');
+  if (s) s.textContent = t('tab.settings');
+  renderDashboard();
+  renderReceipts();
+  renderSettings();
+}
+
 function categorize(storeName) {
   const s = (storeName || '').toLowerCase();
   if (state.learned[s]) return state.learned[s];
@@ -462,7 +665,7 @@ function addItemRow() {
   row.className = 'frow';
   row.style.gap = '8px';
   row.innerHTML = `
-    <input class="finp" style="text-align:left;flex:1" placeholder="Nome prodotto" id="itn${i}" autofocus/>
+    <input class="finp" style="text-align:left;flex:1" placeholder="${t('form.product_ph')}" id="itn${i}" autofocus/>
     <input class="finp" style="width:72px;text-align:right" type="number" step="0.01" placeholder="0.00" id="ita${i}" inputmode="decimal"/>`;
   container.appendChild(row);
   row.querySelector('input').focus();
@@ -482,7 +685,7 @@ function isDuplicate(name, total) {
 }
 
 function saveReceiptFromForm() {
-  const name  = (document.getElementById('fn')?.value || '').trim() || 'Negozio';
+  const name  = (document.getElementById('fn')?.value || '').trim() || t('misc.store');
   const total = parseFloat(document.getElementById('ft')?.value || '0') || 0;
   const date  = document.getElementById('fd')?.value || new Date().toISOString().split('T')[0];
   const catId = document.getElementById('fc')?.value || 'other';
@@ -490,7 +693,7 @@ function saveReceiptFromForm() {
 
   // Duplicate detection
   if (isDuplicate(name, total)) {
-    confirmSheet('Questo scontrino sembra un duplicato. Salvare comunque?', 'Salva Comunque',
+    confirmSheet(t('confirm.duplicate'), t('btn.save_anyway'),
       () => _doSaveFromForm(name, total, date, catId, note), false);
     return;
   }
@@ -523,7 +726,7 @@ function _doSaveFromForm(name, total, date, catId, note) {
 
   haptic('medium');
   closeOverlay('oscanner');
-  toast('Scontrino salvato!');
+  toast(t('toast.saved'));
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
 }
@@ -534,7 +737,7 @@ function openManualEntry() {
   state.pendingPhoto = null;
   const today = new Date().toISOString().split('T')[0];
   const catsOpt = CATS.map(c =>
-    `<option value="${c.id}" ${c.id === 'groceries' ? 'selected' : ''}>${c.icon} ${c.name}</option>`
+    `<option value="${c.id}" ${c.id === 'groceries' ? 'selected' : ''}>${c.icon} ${catName(c)}</option>`
   ).join('');
   const aiBtn = state.settings.geminiKey
     ? `<button class="btn btn-s" id="ai-btn" onclick="analyzeWithAI()" style="gap:6px;margin-top:4px">✨ Analizza con AI</button>`
@@ -542,15 +745,15 @@ function openManualEntry() {
   openOverlay('oscanner', `
   <div class="nav-row">
     <button class="back-btn" onclick="closeOverlay('oscanner')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    <h2>Nuovo Scontrino</h2>
-    <button class="nav-act" onclick="saveManualEntry()">Salva</button>
+    <h2>${t('overlay.new_receipt')}</h2>
+    <button class="nav-act" onclick="saveManualEntry()">${t('btn.save')}</button>
   </div>
   <div style="padding-bottom:40px">
     <div class="fsec">
       <div class="photo-attach" id="photo-area" onclick="openPhotoOptions()">
         <div id="photo-placeholder" style="display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--lbl2);padding:16px 0">
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          <span style="font-size:13px">Aggiungi foto scontrino (opzionale)</span>
+          <span style="font-size:13px">${t('form.photo')}</span>
         </div>
         <div id="photo-preview-wrap" style="display:none;position:relative;width:100%">
           <img id="photo-preview" src="" alt="" style="width:100%;max-height:200px;object-fit:cover;border-radius:8px;display:block"/>
@@ -559,14 +762,14 @@ function openManualEntry() {
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Negozio</div>
+      <div class="fhdr">${t('form.store')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="mn"
-          placeholder="Nome negozio" oninput="autoCategory(this.value)" autofocus/>
+          placeholder="${t('form.store_ph')}" oninput="autoCategory(this.value)" autofocus/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Totale</div>
+      <div class="fhdr">${t('form.total')}</div>
       <div class="frow" style="border-radius:var(--r) var(--r) 0 0">
         <span class="flbl">${currSym()}</span>
         <input class="finp" id="mt" type="number" step="0.01"
@@ -577,26 +780,26 @@ function openManualEntry() {
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Data</div>
+      <div class="fhdr">${t('form.date')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" id="md" type="date" value="${today}"/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Categoria</div>
+      <div class="fhdr">${t('form.category')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <select class="finp" id="mc">${catsOpt}</select>
       </div>
     </div>
     <div class="fsec" id="items-fsec">
       <div class="fhdr" style="display:flex;justify-content:space-between;align-items:center">
-        <span>Prodotti (opzionale)</span>
-        <button type="button" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:0" onclick="addItemRow()">+ Aggiungi</button>
+        <span>${t('form.products')}</span>
+        <button type="button" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;padding:0" onclick="addItemRow()">${t('form.add_item')}</button>
       </div>
       <div id="items-rows"></div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Note (opzionale)</div>
+      <div class="fhdr">${t('form.notes_opt')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="mnote"
           placeholder="Aggiungi una nota…"/>
@@ -604,7 +807,7 @@ function openManualEntry() {
     </div>
     <div class="pad"></div>
     ${aiBtn}
-    <button class="btn btn-p" onclick="saveManualEntry()" style="margin-top:8px">Salva Scontrino</button>
+    <button class="btn btn-p" onclick="saveManualEntry()" style="margin-top:8px">${t('btn.save_receipt')}</button>
     <div class="pad"></div>
   </div>`);
 }
@@ -621,7 +824,7 @@ function saveManualEntry() {
   const catId = document.getElementById('mc')?.value || 'other';
   const note  = (document.getElementById('mnote')?.value || '').trim();
 
-  if (!total) { toast('Inserisci il totale'); return; }
+  if (!total) { toast(t('toast.enter_total')); return; }
 
   if (isDuplicate(name, total)) {
     confirmSheet('Questo scontrino sembra un duplicato. Salvare comunque?', 'Salva Comunque', () => {
@@ -685,7 +888,7 @@ function triggerCapture(camera) {
 function openPhotoOptions() {
   const html = `
   <div style="padding:4px 0 16px">
-    <div style="font-size:17px;font-weight:700;text-align:center;margin-bottom:16px;color:var(--lbl)">Foto Scontrino</div>
+    <div style="font-size:17px;font-weight:700;text-align:center;margin-bottom:16px;color:var(--lbl)">${t('detail.photo_title')}</div>
     <div class="scan-btns">
       <button class="btn btn-p" onclick="closeSheet();triggerCapture(true)">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -713,8 +916,8 @@ function removePendingPhoto() {
 
 async function analyzeWithAI() {
   const key = state.settings.geminiKey;
-  if (!key) { toast('Aggiungi la API key Gemini nelle Impostazioni'); return; }
-  if (!state.pendingPhoto) { toast('Prima aggiungi una foto dello scontrino'); return; }
+  if (!key) { toast(t('toast.need_gemini_key')); return; }
+  if (!state.pendingPhoto) { toast(t('toast.need_photo')); return; }
 
   const btn = document.getElementById('ai-btn');
   if (btn) btn.textContent = '⏳ Analisi in corso…';
@@ -757,7 +960,7 @@ async function analyzeWithAI() {
     if (mn && data.store)  autoCategory(data.store);
 
     if (btn) { btn.textContent = '✓ Pre-compilato'; btn.style.color = 'var(--green,#34C759)'; }
-    toast('Campi pre-compilati — controlla e salva');
+    toast(t('toast.prefilled'));
   } catch (err) {
     if (btn) { btn.textContent = '✨ Analizza con AI'; btn.style.color = ''; }
     toast('Errore AI — ' + (err.message.includes('400') ? 'API key non valida' : 'riprova'));
@@ -826,11 +1029,11 @@ function handleRowTap(id) {
 
 function quickDelete(id) {
   haptic('medium');
-  confirmSheet('Eliminare questo scontrino?', 'Elimina', () => {
+  confirmSheet(t('confirm.delete_quick'), t('btn.delete'), () => {
     haptic('heavy');
     state.receipts = state.receipts.filter(x => x.id !== id);
     persist();
-    toast('Scontrino eliminato');
+    toast(t('toast.deleted'));
     renderDashboard();
     renderReceipts();
   });
@@ -898,7 +1101,7 @@ function renderWeekSection(allRx) {
   <div class="card week-wrap">
     <div class="week-top">
       <div>
-        <div class="week-lbl">Questa Settimana</div>
+        <div class="week-lbl">${t('dash.week')}</div>
         <div class="week-amt">${fmt(thisT)}</div>
       </div>
       ${diff !== null ? `<div class="week-delta-badge" style="background:${diff > 0 ? 'rgba(255,59,48,.12)' : 'rgba(52,199,89,.12)'};color:${dc}">${diff > 0 ? '↑' : '↓'} ${Math.abs(diff).toFixed(0)}%</div>` : ''}
@@ -918,49 +1121,49 @@ function showEditForm(id) {
   el.scrollTop = 0;
   el.innerHTML = `
   <div class="nav-row">
-    <button class="back-btn" onclick="openDetail('${id}')">Annulla</button>
-    <h2>Modifica</h2>
-    <button class="nav-act" onclick="saveReceiptEdit('${id}')">Salva</button>
+    <button class="back-btn" onclick="openDetail('${id}')">${t('btn.cancel')}</button>
+    <h2>${t('overlay.edit')}</h2>
+    <button class="nav-act" onclick="saveReceiptEdit('${id}')">${t('btn.save')}</button>
   </div>
   <div style="padding-bottom:40px">
     <div class="fsec">
-      <div class="fhdr">Negozio</div>
+      <div class="fhdr">${t('form.store')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="en" value="${esc(r.storeName||'')}"/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Totale</div>
+      <div class="fhdr">${t('form.total')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <span class="flbl">${currSym()}</span>
         <input class="finp" id="et" type="number" step="0.01" value="${(r.totalAmount||0).toFixed(2)}"/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Data</div>
+      <div class="fhdr">${t('form.date')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" id="ed" type="date" value="${r.date||''}"/>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Categoria</div>
+      <div class="fhdr">${t('form.category')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <select class="finp" id="ec">${catsOpt}</select>
       </div>
     </div>
     <div class="fsec">
-      <div class="fhdr">Note</div>
+      <div class="fhdr">${t('form.notes')}</div>
       <div class="frow" style="border-radius:var(--r)">
         <input class="finp" style="text-align:left;flex:1" id="enote"
-          placeholder="Aggiungi una nota…" value="${esc(r.note||'')}"/>
+          placeholder="${t('form.note_ph')}" value="${esc(r.note||'')}"/>
       </div>
     </div>
     <div class="pad"></div>
-    <button class="btn btn-p" onclick="saveReceiptEdit('${id}')">Salva Modifiche</button>
+    <button class="btn btn-p" onclick="saveReceiptEdit('${id}')">${t('btn.save_changes')}</button>
     <div style="height:10px"></div>
-    <button class="btn btn-s" onclick="duplicateReceipt('${id}')">Duplica Scontrino</button>
+    <button class="btn btn-s" onclick="duplicateReceipt('${id}')">${t('btn.duplicate')}</button>
     <div style="height:10px"></div>
-    <button class="btn btn-d" onclick="confirmDelete('${id}')">Elimina Scontrino</button>
+    <button class="btn btn-d" onclick="confirmDelete('${id}')">${t('btn.delete_receipt')}</button>
     <div class="pad"></div>
   </div>`;
 }
@@ -980,7 +1183,7 @@ function saveReceiptEdit(id) {
   r.note = noteVal || undefined;
   persist();
   haptic('medium');
-  toast('Scontrino aggiornato');
+  toast(t('toast.updated'));
   openDetail(id);
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
@@ -996,7 +1199,7 @@ function duplicateReceipt(id) {
   persist();
   haptic('medium');
   closeOverlay('odetail');
-  toast('Scontrino duplicato — aggiorna data e importo se necessario');
+  toast(t('toast.duplicated'));
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
   setTimeout(() => openDetail(copy.id), 400);
@@ -1091,7 +1294,7 @@ function calcInsights(thisRx, prevRx, mo) {
       const pct = Math.round(top[1] / thisTotal * 100);
       const cat = catById(top[0]);
       if (pct >= 25) {
-        insights.push({ color: cat.color, icon: cat.icon, text: `${cat.name} è il ${pct}% della tua spesa questo mese` });
+        insights.push({ color: cat.color, icon: cat.icon, text: `${catName(cat)} ${pct}% ${state.settings.lang==='en'?'of spending this month':'della spesa questo mese'}` });
       }
     }
   }
@@ -1103,7 +1306,7 @@ function calcInsights(thisRx, prevRx, mo) {
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     if (dayOfMonth >= 5 && dayOfMonth <= daysInMonth - 3) {
       const forecast = Math.round((thisTotal / dayOfMonth) * daysInMonth);
-      insights.push({ color: 'var(--accent)', icon: '🔮', text: `Al ritmo attuale spenderai circa ${fmt(forecast)} questo mese` });
+      insights.push({ color: 'var(--accent)', icon: '🔮', text: t('misc.vs_last', {dir: '🔮', n: fmt(forecast)}) });
     }
   }
 
@@ -1113,7 +1316,7 @@ function calcInsights(thisRx, prevRx, mo) {
     thisRx.forEach(r => { const s = r.storeName || 'Negozio'; storeCounts[s] = (storeCounts[s] || 0) + 1; });
     const topStore = Object.entries(storeCounts).sort((a, b) => b[1] - a[1])[0];
     if (topStore && topStore[1] >= 2) {
-      insights.push({ color: 'var(--purple)', icon: '🏪', text: `${topStore[0]}: ${topStore[1]} visite questo mese` });
+      insights.push({ color: 'var(--purple)', icon: '🏪', text: `${topStore[0]}: ${topStore[1]} ${topStore[1] === 1 ? t('misc.visits_one') : t('misc.visits_many')}` });
     }
   }
 
@@ -1161,8 +1364,8 @@ function renderCalendarSection(thisRx, mo) {
   return `
   <div class="card cal-wrap">
     <div class="cal-hdr">
-      <span class="cal-title">Calendario Spese</span>
-      <span class="cal-legend"><span class="cal-legend-dot"></span>= spesa</span>
+      <span class="cal-title">${t('dash.calendar')}</span>
+      <span class="cal-legend"><span class="cal-legend-dot"></span>${t('misc.cal_legend')}</span>
     </div>
     <div class="cal-grid">
       ${header}
@@ -1190,8 +1393,8 @@ function renderBudgetSection(spent, budget) {
   const dash = (Math.min(pct, 100) / 100 * circ).toFixed(2);
   const offset = (circ / 4).toFixed(2);
   const remainText = overBudget
-    ? `<span style="color:var(--red);font-weight:700">Sopra budget</span>`
-    : `${fmt(remaining)} rimanenti`;
+    ? `<span style="color:var(--red);font-weight:700">${t('misc.over_budget')}</span>`
+    : `${fmt(remaining)} ${t('misc.remaining').replace('{amount} ','')}`;
 
   return `
   <div class="card budget-wrap">
@@ -1205,7 +1408,7 @@ function renderBudgetSection(spent, budget) {
       <text x="50" y="62" text-anchor="middle" font-size="9" style="fill:var(--lbl2)">budget</text>
     </svg>
     <div class="budget-info">
-      <div class="budget-lbl">Budget Mensile</div>
+      <div class="budget-lbl">${t('dash.budget')}</div>
       <div class="budget-remain">${remainText}</div>
       <div class="budget-meta">${fmt(spent)} di ${fmt(budget)}</div>
     </div>
@@ -1222,7 +1425,7 @@ function renderInsightsSection(insights) {
     </div>`).join('');
   return `
   <div class="card insight-wrap">
-    <div class="insight-hdr">Tendenze</div>
+    <div class="insight-hdr">${t('dash.trends')}</div>
     ${rows}
   </div>`;
 }
@@ -1237,7 +1440,7 @@ function renderSparkSection(data) {
   return `
   <div class="card spark-wrap">
     <div class="spark-hdr">
-      <span class="spark-title">Ultimi 6 Mesi</span>
+      <span class="spark-title">${t('dash.last6')}</span>
       ${yearTotal > 0 ? `<span style="font-size:12px;font-weight:700;color:var(--lbl)">${fmt(yearTotal)} nel ${year}</span>` : ''}
     </div>
     ${sparklineSVG(data)}
@@ -1264,7 +1467,7 @@ function renderYearlySection() {
   const avgMonthly = yearTotal / monthCount;
   const [worstM, worstAmt] = Object.entries(monthMap).sort((a,b)=>b[1]-a[1])[0];
   const worstName = new Date(year, +worstM, 1)
-    .toLocaleDateString('it-IT',{month:'long'});
+    .toLocaleDateString(state.settings.lang === 'en' ? 'en-GB' : 'it-IT',{month:'long'});
   const worstNameCap = worstName[0].toUpperCase() + worstName.slice(1);
 
   const catMap = {};
@@ -1274,29 +1477,29 @@ function renderYearlySection() {
 
   return `
   <div class="card yearly-card">
-    <div class="yearly-hdr">Riepilogo ${year}</div>
+    <div class="yearly-hdr">${t('year.receipts')} ${year}</div>
     <div class="yearly-stats">
       <div class="ys-item">
         <div class="ys-val">${fmt(yearTotal)}</div>
-        <div class="ys-lbl">Totale anno</div>
+        <div class="ys-lbl">${t('year.total')}</div>
       </div>
       <div class="ys-divider"></div>
       <div class="ys-item">
         <div class="ys-val">${yearRx.length}</div>
-        <div class="ys-lbl">Scontrini</div>
+        <div class="ys-lbl">${t('year.receipts')}</div>
       </div>
       <div class="ys-divider"></div>
       <div class="ys-item">
         <div class="ys-val">${fmt(avgMonthly)}</div>
-        <div class="ys-lbl">Media/mese</div>
+        <div class="ys-lbl">${t('year.avg_month')}</div>
       </div>
     </div>
     ${topCat ? `<div class="yearly-row">
-      <span>${topCat.icon} Categoria principale</span>
-      <strong>${topCat.name}</strong>
+      <span>${topCat.icon} ${t('year.top_cat')}</span>
+      <strong>${catName(topCat)}</strong>
     </div>` : ''}
     <div class="yearly-row">
-      <span>📈 Mese più costoso</span>
+      <span>${t('year.top_month')}</span>
       <strong>${worstNameCap} · ${fmt(+worstAmt)}</strong>
     </div>
   </div>`;
@@ -1328,16 +1531,16 @@ function renderDashboard() {
 
   const deltaColor = delta !== null && delta <= 0 ? 'var(--green)' : 'var(--red)';
   const deltaStr   = delta !== null
-    ? `<div class="s-delta" style="color:${deltaColor}">${delta <= 0 ? '↓' : '↑'} ${Math.abs(delta).toFixed(0)}% rispetto al mese scorso</div>`
-    : `<div class="s-delta" style="color:var(--lbl2)">Primo mese tracciato</div>`;
+    ? `<div class="s-delta" style="color:${deltaColor}">${t('misc.vs_last', {dir: delta <= 0 ? '↓' : '↑', n: Math.abs(delta).toFixed(0)})}</div>`
+    : `<div class="s-delta" style="color:var(--lbl2)">${t('misc.first_month')}</div>`;
 
   const chartSection = catRows.length > 0 ? `
   <div class="card chart-card">
-    <div class="chart-title">Per Categoria <span style="font-size:9px;opacity:.5;font-weight:400;text-transform:none">· tocca per filtrare</span></div>
+    <div class="chart-title">${t('dash.by_category')} <span style="font-size:9px;opacity:.5;font-weight:400;text-transform:none">${t('dash.cat_tap')}</span></div>
     ${catRows.map(({ cat, amt }, i) => `
     <div class="brow" onclick="gotoTab('r');setFilter('${cat.id}')" style="cursor:pointer">
       <span class="bico">${cat.icon}</span>
-      <span class="bnm">${cat.name}</span>
+      <span class="bnm">${catName(cat)}</span>
       <div class="btrk"><div class="bfll" style="width:${(amt / maxAmt * 100).toFixed(1)}%;background:${cat.color};animation-delay:${i * 65}ms"></div></div>
       <span class="bval">${fmt(amt)}</span>
     </div>`).join('')}
@@ -1347,16 +1550,16 @@ function renderDashboard() {
   <div class="welcome-wrap">
     <div class="welcome-hero">
       <div class="welcome-ico-wrap"><span class="welcome-ico">S</span></div>
-      <h2 class="welcome-title">Benvenuto su Slippy</h2>
-      <p class="welcome-sub">Il modo più intelligente di tracciare le spese quotidiane.</p>
+      <h2 class="welcome-title">${t('welcome.title')}</h2>
+      <p class="welcome-sub">${t('welcome.sub')}</p>
     </div>
     <div class="card welcome-steps">
-      <div class="ws-row"><span class="ws-num">1</span><div><strong>Fotografa</strong> uno scontrino con la fotocamera</div></div>
-      <div class="ws-row"><span class="ws-num">2</span><div><strong>Slippy legge</strong> importo e negozio automaticamente</div></div>
-      <div class="ws-row"><span class="ws-num">3</span><div><strong>Analizza</strong> le spese mensili con AI integrata</div></div>
+      <div class="ws-row"><span class="ws-num">1</span><div>${t('welcome.step1')}</div></div>
+      <div class="ws-row"><span class="ws-num">2</span><div>${t('welcome.step2')}</div></div>
+      <div class="ws-row"><span class="ws-num">3</span><div>${t('welcome.step3')}</div></div>
     </div>
-    <button class="welcome-cta" onclick="document.getElementById('fab').click()">Aggiungi il primo scontrino →</button>
-    ${!state.settings.apiKey ? `<p class="welcome-hint">💡 Aggiungi una chiave API Claude nelle Impostazioni per sbloccare l'analisi AI.</p>` : ''}
+    <button class="welcome-cta" onclick="document.getElementById('fab').click()">${t('welcome.cta')}</button>
+    ${!state.settings.apiKey ? `<p class="welcome-hint">${t('welcome.ai_hint')}</p>` : ''}
   </div>` : '';
 
   const weekSection    = renderWeekSection(state.receipts);
@@ -1378,9 +1581,9 @@ function renderDashboard() {
     </div>
     ${cachedAnalysis?.text
       ? `<p class="ai-tip">${esc(cachedAnalysis.text)}</p>
-         <button class="ai-regen-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">↺ Rigenera</button>`
-      : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Analisi intelligente delle spese di ${monthLabel(mo)}.</p>
-         <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">Analizza questo mese →</button>`}
+         <button class="ai-regen-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">${t('btn.regenerate')}</button>`
+      : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">${t('dash.ai_desc', {month: monthLabel(mo)})}</p>
+         <button class="ai-btn" onclick="fetchMonthlyAnalysis('${monthKey}')">${t('btn.analyze_month')}</button>`}
   </div>` : '';
 
   const forecastSection   = renderForecastSection(thisRx, mo);
@@ -1392,8 +1595,8 @@ function renderDashboard() {
   <div class="card nudge-card" onclick="gotoTab('s')">
     <div class="nudge-ico">💰</div>
     <div class="nudge-body">
-      <div class="nudge-title">Imposta un budget</div>
-      <div class="nudge-sub">Monitora quanto stai spendendo rispetto al tuo obiettivo mensile.</div>
+      <div class="nudge-title">${t('dash.nudge_budget')}</div>
+      <div class="nudge-sub">${t('dash.nudge_budget_desc')}</div>
     </div>
     <div class="nudge-arr">›</div>
   </div>` : '';
@@ -1402,8 +1605,8 @@ function renderDashboard() {
   <div class="card nudge-card" onclick="gotoTab('s')">
     <div class="nudge-ico">✦</div>
     <div class="nudge-body">
-      <div class="nudge-title">Sblocca l'analisi AI</div>
-      <div class="nudge-sub">Aggiungi la tua API key Claude per ricevere consigli personalizzati.</div>
+      <div class="nudge-title">${t('dash.nudge_ai')}</div>
+      <div class="nudge-sub">${t('dash.nudge_ai_desc')}</div>
     </div>
     <div class="nudge-arr">›</div>
   </div>` : '';
@@ -1414,7 +1617,7 @@ function renderDashboard() {
       <div class="brand-ico-wrap"><span class="brand-ico">S</span></div>
       <span class="brand-name">slippy</span>
     </div>
-    ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}gg</span>` : ''}
+    ${streak >= 3 ? `<span class="streak-badge">🔥 ${streak}${t('date.today')[0].toLowerCase() === 'o' ? 'gg' : 'd'}</span>` : ''}
   </div>
   <div class="card spend-card">
     <div class="spend-mrow">
@@ -1422,17 +1625,17 @@ function renderDashboard() {
       <span>${monthLabel(mo)}</span>
       <button onclick="shiftMonth(1)" ${nextDisabled}>›</button>
     </div>
-    <div class="s-lbl">Spesa totale</div>
+    <div class="s-lbl">${t('dash.spending')}</div>
     <div class="s-amt">${fmt(total)}</div>
     ${deltaStr}
     <div class="s-stats">
-      <div class="sp"><div class="sp-v">${thisRx.length}</div><div class="sp-l">Scontrini</div></div>
-      <div class="sp"><div class="sp-v">${fmt(avg)}</div><div class="sp-l">Media</div></div>
-      <div class="sp"><div class="sp-v">${catRows.length}</div><div class="sp-l">Categorie</div></div>
+      <div class="sp"><div class="sp-v">${thisRx.length}</div><div class="sp-l">${t('dash.receipts')}</div></div>
+      <div class="sp"><div class="sp-v">${fmt(avg)}</div><div class="sp-l">${t('dash.average')}</div></div>
+      <div class="sp"><div class="sp-v">${catRows.length}</div><div class="sp-l">${t('dash.categories')}</div></div>
     </div>
     ${thisRx.length > 0 ? `<button class="spend-share-btn" onclick="shareMonthSummary('${mo.getFullYear()}-${mo.getMonth()}')">
       <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-      Condividi riepilogo
+      ${t('dash.share')}
     </button>` : ''}
   </div>
   ${forecastSection}
@@ -1499,7 +1702,7 @@ function renderReceipts(q) {
   // Build store frequency map for recurring badge
   const storeFreq = {};
   state.receipts.forEach(r => {
-    const s = r.storeName || 'Negozio';
+    const s = r.storeName || t('misc.store');
     storeFreq[s] = (storeFreq[s] || 0) + 1;
   });
 
@@ -1507,18 +1710,19 @@ function renderReceipts(q) {
   const usedCats = [...new Set(state.receipts.map(r => r.category))];
   const catCounts = {};
   state.receipts.forEach(r => { catCounts[r.category] = (catCounts[r.category] || 0) + 1; });
-  const sortLabel = { date_desc: '↓ Data', date_asc: '↑ Data', amt_desc: '↓ ' + currSym(), amt_asc: '↑ ' + currSym() };
+  const dateStr = state.settings.lang === 'en' ? 'Date' : 'Data';
+  const sortLabel = { date_desc: '↓ ' + dateStr, date_asc: '↑ ' + dateStr, amt_desc: '↓ ' + currSym(), amt_asc: '↑ ' + currSym() };
   const nextSort  = { date_desc: 'amt_desc', amt_desc: 'amt_asc', amt_asc: 'date_asc', date_asc: 'date_desc' };
   const filterBar = `
   <div class="filter-bar-row">
     <div class="filter-wrap">
-      <button class="fchip ${!state.filterCat ? 'on' : ''}" onclick="setFilter(null)">Tutti <span class="chip-cnt">${state.receipts.length}</span></button>
+      <button class="fchip ${!state.filterCat ? 'on' : ''}" onclick="setFilter(null)">${t('rx.filter_all')} <span class="chip-cnt">${state.receipts.length}</span></button>
       ${usedCats.map(cid => {
         const c = catById(cid);
         const active = state.filterCat === cid;
         return `<button class="fchip ${active ? 'on' : ''}"
           style="${active ? `background:${c.color};border-color:${c.color}` : ''}"
-          onclick="setFilter('${cid}')">${c.icon} ${c.name} <span class="chip-cnt">${catCounts[cid] || 0}</span></button>`;
+          onclick="setFilter('${cid}')">${c.icon} ${catName(c)} <span class="chip-cnt">${catCounts[cid] || 0}</span></button>`;
       }).join('')}
     </div>
     <button class="sort-btn" onclick="setSort('${nextSort[state.sortOrder] || 'date_desc'}')">${sortLabel[state.sortOrder] || '↓ Data'}</button>
@@ -1527,15 +1731,15 @@ function renderReceipts(q) {
   const isFiltered = query || state.filterCat;
   const filteredTotal = list.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const countLine = isFiltered && list.length > 0
-    ? `<div class="result-count">${list.length} risultat${list.length===1?'o':'i'} · ${fmt(filteredTotal)}</div>`
+    ? `<div class="result-count">${t('misc.results', {n: list.length, s: state.settings.lang === 'en' ? (list.length===1?'':' ') : (list.length===1?'o':'i'), amount: fmt(filteredTotal)})}</div>`
     : '';
 
   let bodyHTML = '';
   if (list.length === 0) {
     bodyHTML = `<div class="empty">
       <div class="empty-ico">${isFiltered ? '🔍' : '🧾'}</div>
-      <h3>${isFiltered ? 'Nessun risultato' : 'Nessuno scontrino'}</h3>
-      <p>${isFiltered ? 'Prova a cambiare filtro o ricerca.' : 'Tocca + per aggiungere il primo scontrino.'}</p>
+      <h3>${isFiltered ? t('rx.empty_filtered') : t('rx.empty')}</h3>
+      <p>${isFiltered ? t('rx.empty_filtered_sub') : t('rx.empty_sub')}</p>
     </div>`;
   } else {
     groupByDate(list).forEach(([grp, rows]) => {
@@ -1547,14 +1751,14 @@ function renderReceipts(q) {
         const badge = freq >= 3 ? `<span class="freq-badge">×${freq}</span>` : '';
         bodyHTML += `
         <div class="rx-wrap">
-          <div class="rx-del-btn" onclick="quickDelete('${r.id}')"><span>Elimina</span></div>
+          <div class="rx-del-btn" onclick="quickDelete('${r.id}')"><span>${t('btn.delete')}</span></div>
           <div class="lrow" data-id="${r.id}" onclick="handleRowTap('${r.id}')">
             ${r.imageDataURL
               ? `<img src="${r.imageDataURL}" class="rx-thumb"/>`
               : `<div class="ico-box" style="background:${cat.color}22">${cat.icon}</div>`}
             <div class="ri">
-              <div class="rn">${esc(r.storeName || 'Negozio')}${badge}</div>
-              <div class="rs">${r.imageDataURL ? `${cat.icon} ` : ''}${esc(cat.name)} · ${fmtDate(r.date || r.createdAt)}${r.note ? `<span class="note-pip"> · 📝</span>` : ''}</div>
+              <div class="rn">${esc(r.storeName || t('misc.store'))}${badge}</div>
+              <div class="rs">${r.imageDataURL ? `${cat.icon} ` : ''}${esc(catName(cat))} · ${fmtDate(r.date || r.createdAt)}${r.note ? `<span class="note-pip"> · 📝</span>` : ''}</div>
             </div>
             <div class="ra" style="color:${cat.color}">${fmt(r.totalAmount || 0)}</div>
           </div>
@@ -1571,17 +1775,17 @@ function renderReceipts(q) {
   });
   const thisMonthTotal = thisMonthRx.reduce((s, r) => s + (r.totalAmount || 0), 0);
   const totalLine = state.receipts.length > 0
-    ? `<span class="rx-month-total">${fmt(thisMonthTotal)} questo mese</span>`
+    ? `<span class="rx-month-total">${fmt(thisMonthTotal)} ${t('dash.week').toLowerCase()}</span>`
     : '';
 
   el.innerHTML = `
   <div class="nav" style="display:flex;justify-content:space-between;align-items:baseline">
-    <h1>Scontrini</h1>
+    <h1>${t('tab.receipts')}</h1>
     ${totalLine}
   </div>
   <div class="search-wrap">
     <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    <input class="search-inp" placeholder="Cerca scontrini…"
+    <input class="search-inp" placeholder="${t('rx.search_ph')}"
       value="${esc(state.searchQ)}" oninput="renderReceipts(this.value)"/>
     ${state.searchQ ? `<button class="search-clear" onclick="renderReceipts('')" aria-label="Cancella ricerca">✕</button>` : ''}
   </div>
@@ -1606,7 +1810,7 @@ function buildDetailHTML(id) {
 
   const itemsHTML = (r.items || []).length > 0 ? `
   <div class="det-sec">
-    <h3>Prodotti</h3>
+    <h3>${t('detail.products')}</h3>
     <div class="card">
       ${r.items.map(it => `
       <div class="irow">
@@ -1628,12 +1832,12 @@ function buildDetailHTML(id) {
   const tipHTML = existingTip
     ? `<p class="ai-tip">${esc(existingTip)}</p>`
     : `<p style="font-size:13px;color:var(--lbl2);margin-bottom:10px">Ottieni un consiglio personalizzato per questo scontrino.</p>
-       <button class="ai-btn" onclick="fetchTip('${id}')">Ottieni consiglio</button>`;
+       <button class="ai-btn" onclick="fetchTip('${id}')">${t('btn.get_advice')}</button>`;
 
   return `
   <div class="nav-row">
-    <button class="back-btn" onclick="closeOverlay('odetail')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Indietro</button>
-    <h2>Scontrino</h2>
+    <button class="back-btn" onclick="closeOverlay('odetail')"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> ${t('btn.back')}</button>
+    <h2>${t('overlay.receipt')}</h2>
     <div style="display:flex;gap:6px;align-items:center">
       <button class="back-btn share-btn" onclick="shareReceipt('${id}')" title="Condividi">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1642,7 +1846,7 @@ function buildDetailHTML(id) {
           <line x1="12" y1="2" x2="12" y2="15"/>
         </svg>
       </button>
-      <button class="nav-act" onclick="showEditForm('${id}')">Modifica</button>
+      <button class="nav-act" onclick="showEditForm('${id}')">${t('btn.edit')}</button>
     </div>
   </div>
   <div style="padding-bottom:48px">
@@ -1650,27 +1854,27 @@ function buildDetailHTML(id) {
       <div class="det-hero-top">
         <div class="det-hero-ico">${cat.icon}</div>
         <div>
-          <div class="det-hero-store">${esc(r.storeName || 'Negozio')}</div>
-          <div class="det-hero-cat">${esc(cat.name)}</div>
+          <div class="det-hero-store">${esc(r.storeName || t('misc.store'))}</div>
+          <div class="det-hero-cat">${esc(catName(cat))}</div>
         </div>
       </div>
       <div class="det-hero-amt">${fmt(r.totalAmount || 0)}</div>
       <div class="det-hero-date">${fmtDate(r.date || r.createdAt)}</div>
       ${r.imageDataURL ? `<div class="det-hero-thumb" onclick="openImage('${id}')">
         <img src="${r.imageDataURL}" style="width:48px;height:48px;object-fit:cover;border-radius:10px;opacity:.85"/>
-        <span style="font-size:11px;color:rgba(255,255,255,.55);margin-top:4px">Vedi foto</span>
+        <span style="font-size:11px;color:rgba(255,255,255,.55);margin-top:4px">${t('detail.view_photo')}</span>
       </div>` : ''}
     </div>
     ${r.note ? `<div class="det-note"><span class="det-note-ico">📝</span>${esc(r.note)}</div>` : ''}
     <div class="det-sec" style="margin-top:14px">
-      <h3>Categoria</h3>
+      <h3>${t('detail.category')}</h3>
       <div class="chips">${chipsHTML}</div>
     </div>
     ${itemsHTML}
     <div class="card ai-card" id="tip_${id}">
       <div class="ai-hdr">
         <span style="font-size:16px">✦</span>
-        <h3>Consiglio AI</h3>
+        <h3>${t('dash.ai_tip')}</h3>
         <span class="ai-badge">Claude</span>
       </div>
       ${tipHTML}
@@ -1700,7 +1904,7 @@ function setCategory(id, catId) {
 
 function confirmDelete(id) {
   haptic('medium');
-  confirmSheet('Eliminare questo scontrino? Non sarà possibile annullare.', 'Elimina', () => {
+  confirmSheet(t('confirm.delete'), t('btn.delete'), () => {
     haptic('heavy');
     state.receipts = state.receipts.filter(x => x.id !== id);
     persist();
@@ -1720,9 +1924,16 @@ function renderSettings() {
   const budget = state.settings.budget || 0;
   const curCode = state.settings.currency || 'EUR';
   el.innerHTML = `
-  <div class="nav"><h1>Impostazioni</h1></div>
+  <div class="nav"><h1>${t('tab.settings')}</h1></div>
   <div class="ssel">
-    <div class="sshdr">Valuta</div>
+    <div class="sshdr">${t('set.language')}</div>
+    <div style="display:flex;gap:8px;padding:4px 0 8px">
+      <button class="btn ${state.settings.lang === 'it' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:12px;font-size:15px;margin:0" onclick="changeLang('it')">🇮🇹 Italiano</button>
+      <button class="btn ${state.settings.lang === 'en' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:12px;font-size:15px;margin:0" onclick="changeLang('en')">🇬🇧 English</button>
+    </div>
+  </div>
+  <div class="ssel">
+    <div class="sshdr">${t('set.currency')}</div>
     <div class="cur-grid">
       ${CURRENCIES.map(c => `
         <button class="cur-chip ${c.code === curCode ? 'cur-active' : ''}"
@@ -1731,39 +1942,39 @@ function renderSettings() {
           <span class="cur-code">${c.code}</span>
         </button>`).join('')}
     </div>
-    <div class="snote">Usata in tutti i totali e nel budget.</div>
+    <div class="snote">${t('set.currency_note')}</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">Budget Mensile</div>
+    <div class="sshdr">${t('set.budget')}</div>
     <div class="srow si-row" style="border-radius:var(--r)">
       <div class="si-ico" style="background:#34C75922">💰</div>
-      <span class="slbl">${currSym()} Budget mensile</span>
+      <span class="slbl">${t('set.budget_lbl', {sym: currSym()})}</span>
       <input class="kinp" id="budgetInp" type="number" min="0" step="10"
         placeholder="0" value="${budget > 0 ? budget : ''}"
         style="text-align:right;font-size:15px;font-family:inherit;color:var(--accent);max-width:90px"/>
     </div>
-    <div class="snote">Imposta un budget mensile per monitorare la spesa nella Dashboard.</div>
-    <button class="btn btn-p" style="margin-top:8px" onclick="saveBudget()">Salva Budget</button>
+    <div class="snote">${t('set.budget_note')}</div>
+    <button class="btn btn-p" style="margin-top:8px" onclick="saveBudget()">${t('btn.save_budget')}</button>
   </div>
   <div class="ssel">
-    <div class="sshdr">Claude API Key</div>
+    <div class="sshdr">${t('set.claude')}</div>
     <div class="srow" style="flex-direction:column;align-items:stretch;gap:10px;padding:14px 16px">
       <input class="kinp" id="apik" type="password"
         placeholder="sk-ant-…" value="${esc(key)}"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
       <div style="display:flex;gap:8px">
         <button class="btn btn-s" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
-          onclick="toggleKeyVis()">Mostra / Nascondi</button>
+          onclick="toggleKeyVis()">${t('btn.show')} / ${t('btn.hide')}</button>
         <button class="btn btn-p" style="flex:1;width:auto;padding:11px;font-size:14px;margin:0"
-          onclick="saveApiKey()">Salva</button>
+          onclick="saveApiKey()">${t('btn.save')}</button>
       </div>
       ${key ? `<button class="btn btn-d" style="width:auto;padding:10px;font-size:13px;margin:0"
-        onclick="removeApiKey()">Rimuovi Chiave</button>` : ''}
+        onclick="removeApiKey()">${t('btn.remove_key')}</button>` : ''}
     </div>
-    <div class="snote">Salvata nel browser. Ottieni la tua su console.anthropic.com.</div>
+    <div class="snote">${t('set.claude_note')}</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">AI (Opzionale)</div>
+    <div class="sshdr">${t('set.ai')}</div>
     <div class="fsec" style="margin:0">
       <div class="frow" style="border-radius:var(--r) var(--r) 0 0">
         <input class="finp" style="text-align:left;flex:1" id="gemini-key"
@@ -1774,49 +1985,54 @@ function renderSettings() {
         <button class="btn btn-p" style="width:auto;flex:1;padding:11px;font-size:14px;margin:0" onclick="saveGeminiKey()">Salva</button>
       </div>
     </div>
-    <div class="snote">Gratuita su aistudio.google.com — abilita l'analisi automatica degli scontrini.</div>
+    <div class="snote">${t('set.gemini_note')}</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">Dati</div>
+    <div class="sshdr">${t('set.data')}</div>
     <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'exportCSV()' : ''}">
       <div class="si-ico" style="background:#007AFF22">📤</div>
-      <span class="slbl" style="${!count ? 'color:var(--lbl3)' : ''}">Esporta CSV</span>
-      <span class="sval">${count} scontrin${count === 1 ? 'o' : 'i'}</span>
+      <span class="slbl" style="${!count ? 'color:var(--lbl3)' : ''}">${t('set.export')}</span>
+      <span class="sval">${t('misc.receipt_count', {n: count, s: state.settings.lang === 'en' ? (count===1?'':'s') : (count===1?'o':'i')})}</span>
     </div>
     <div class="srow si-row" style="cursor:pointer" onclick="importCSV()">
       <div class="si-ico" style="background:#34C75922">📥</div>
-      <span class="slbl">Importa CSV</span>
-      <span class="sval">Ripristina</span>
+      <span class="slbl">${t('set.import')}</span>
+      <span class="sval">${t('misc.restore')}</span>
     </div>
     <input type="file" id="csv-import-inp" accept=".csv,text/csv" style="display:none" onchange="handleCSVImport(this)"/>
     <div class="srow si-row" style="cursor:pointer" onclick="${count ? 'clearAllData()' : ''}">
       <div class="si-ico" style="background:#FF3B3022">🗑️</div>
-      <span class="slbl" style="${!count ? 'color:var(--lbl3)' : 'color:var(--red)'}">Cancella tutti i dati</span>
+      <span class="slbl" style="${!count ? 'color:var(--lbl3)' : 'color:var(--red)'}">${t('set.delete_all')}</span>
     </div>
-    <div class="snote">I dati sono archiviati localmente sul tuo dispositivo.</div>
+    <div class="snote">${t('set.data_note')}</div>
   </div>
   <div class="ssel">
-    <div class="sshdr">Informazioni</div>
+    <div class="sshdr">${t('set.info')}</div>
     <div class="srow si-row">
       <div class="si-ico" style="background:#5E5CE622">✦</div>
-      <span class="slbl">Versione</span>
+      <span class="slbl">${t('set.version')}</span>
       <span class="sval">3.0 PWA</span>
     </div>
     <div class="srow si-row">
       <div class="si-ico" style="background:#FF950022">🤖</div>
-      <span class="slbl">Analisi AI</span>
+      <span class="slbl">${t('set.ai_engine')}</span>
       <span class="sval">Gemini 2.0 Flash</span>
     </div>
-    <div class="srow si-row">
-      <div class="si-ico" style="background:#AF52DE22">🌍</div>
-      <span class="slbl">Lingue</span>
-      <span class="sval">Italiano · Inglese</span>
+    <div class="srow si-row" style="flex-direction:column;align-items:stretch;padding:12px 16px;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="si-ico" style="background:#AF52DE22">🌍</div>
+        <span class="slbl">${t('set.language')}</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ${state.settings.lang === 'it' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:10px;font-size:14px;margin:0" onclick="changeLang('it')">🇮🇹 Italiano</button>
+        <button class="btn ${state.settings.lang === 'en' ? 'btn-p' : 'btn-s'}" style="flex:1;padding:10px;font-size:14px;margin:0" onclick="changeLang('en')">🇬🇧 English</button>
+      </div>
     </div>
   </div>
   <div class="settings-brand">
     <div class="settings-brand-ico">S</div>
     <div class="settings-brand-name">slippy</div>
-    <div class="settings-brand-tag">Fotografa lo scontrino. Conosci la tua spesa.</div>
+    <div class="settings-brand-tag">${t('set.tagline')}</div>
   </div>
   <div class="pad"></div>`;
 }
@@ -1826,7 +2042,7 @@ function saveBudget() {
   state.settings.budget = v;
   saveSettings();
   haptic('medium');
-  toast(v > 0 ? `Budget impostato: ${fmt(v)}/mese` : 'Budget rimosso');
+  toast(v > 0 ? t('misc.budget_set', {amount: fmt(v)}) : t('misc.budget_removed'));
   renderSettings();
   renderDashboard();
 }
@@ -1835,7 +2051,7 @@ function saveCurrency(code) {
   state.settings.currency = code;
   saveSettings();
   haptic('light');
-  toast(`Valuta: ${CURRENCIES.find(c => c.code === code)?.symbol || code} ${code}`);
+  toast(t('misc.currency_changed', {sym: CURRENCIES.find(c => c.code === code)?.symbol || code, code}));
   renderSettings();
   renderDashboard();
   if (state.tab === 'r') renderReceipts();
@@ -1849,20 +2065,20 @@ function saveApiKey() {
   const v = (document.getElementById('apik')?.value || '').trim();
   state.settings.apiKey = v;
   saveSettings();
-  toast(v ? 'API key salvata ✓' : 'API key rimossa');
+  toast(v ? t('toast.api_saved') : t('toast.api_removed'));
   renderSettings();
 }
 function removeApiKey() {
   state.settings.apiKey = '';
   saveSettings();
-  toast('API key rimossa');
+  toast(t('toast.api_removed'));
   renderSettings();
 }
 function saveGeminiKey() {
   const v = (document.getElementById('gemini-key')?.value || '').trim();
   state.settings.geminiKey = v;
   saveSettings();
-  toast(v ? 'Gemini API key salvata ✓' : 'Gemini API key rimossa');
+  toast(v ? t('toast.gemini_saved') : t('toast.gemini_removed'));
   renderSettings();
 }
 function exportCSV() {
@@ -1887,7 +2103,7 @@ function exportCSV() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('CSV esportato!');
+  toast(t('toast.csv_exported'));
 }
 
 function importCSV() {
@@ -1902,7 +2118,7 @@ function handleCSVImport(input) {
   reader.onload = e => {
     try {
       const lines = e.target.result.split('\n').map(l => l.trim()).filter(Boolean);
-      if (lines.length < 2) { toast('File CSV vuoto o non valido.'); return; }
+      if (lines.length < 2) { toast(t('toast.csv_invalid')); return; }
       // Parse header to determine column positions
       const header = parseCSVRow(lines[0]).map(h => h.toLowerCase());
       const idIdx    = header.indexOf('id');
@@ -1910,7 +2126,7 @@ function handleCSVImport(input) {
       const totalIdx = header.findIndex(h => h.includes('total'));
       const dateIdx  = header.indexOf('date');
       const catIdx   = header.indexOf('category');
-      if (storeIdx < 0 || totalIdx < 0) { toast('Formato CSV non riconosciuto.'); return; }
+      if (storeIdx < 0 || totalIdx < 0) { toast(t('toast.csv_format')); return; }
 
       const existing = new Set(state.receipts.map(r => r.id));
       let added = 0;
@@ -1932,11 +2148,11 @@ function handleCSVImport(input) {
         renderDashboard();
         renderReceipts();
         renderSettings();
-        toast(`${added} scontrin${added===1?'o':'i'} importat${added===1?'o':'i'}!`);
+        toast(state.settings.lang === 'en' ? `${added} receipt${added===1?'':'s'} imported!` : `${added} scontrin${added===1?'o':'i'} importat${added===1?'o':'i'}!`);
       } else {
-        toast('Nessun nuovo scontrino trovato.');
+        toast(t('toast.csv_none'));
       }
-    } catch(_) { toast('Errore durante l\'importazione.'); }
+    } catch(_) { toast(t('toast.csv_error')); }
     input.value = '';
   };
   reader.readAsText(file);
@@ -1957,12 +2173,12 @@ function parseCSVRow(line) {
 
 function clearAllData() {
   haptic('medium');
-  confirmSheet(`Eliminare tutti i ${state.receipts.length} scontrini? Non sarà possibile annullare.`, 'Elimina tutto', () => {
+  confirmSheet(t('confirm.delete_all', {n: state.receipts.length}), t('misc.delete_all'), () => {
     haptic('heavy');
     state.receipts = [];
     state.aiTips   = {};
     persist();
-    toast('Dati eliminati');
+    toast(t('toast.data_deleted'));
     renderDashboard();
     renderReceipts();
     renderSettings();
@@ -1990,7 +2206,10 @@ async function fetchTip(receiptId) {
     const itemsLine = r.items?.length > 0
       ? ` Prodotti: ${r.items.slice(0,5).map(i=>i.name).join(', ')}.`
       : '';
-    const prompt = `Sei un consulente finanziario. Ho speso ${fmt(r.totalAmount || 0)} da "${r.storeName || 'un negozio'}" (categoria: ${cat.name}).${itemsLine} Dammi 1 consiglio pratico e specifico in italiano in massimo 2 frasi. Sii amichevole.`;
+    const isEn = state.settings.lang === 'en';
+    const prompt = isEn
+      ? `You are a financial advisor. I spent ${fmt(r.totalAmount || 0)} at "${r.storeName || 'a store'}" (category: ${catName(cat)}).${itemsLine} Give me 1 short practical tip in max 2 sentences. Be friendly.`
+      : `Sei un consulente finanziario. Ho speso ${fmt(r.totalAmount || 0)} da "${r.storeName || 'un negozio'}" (categoria: ${catName(cat)}).${itemsLine} Dammi 1 consiglio pratico e specifico in italiano in massimo 2 frasi. Sii amichevole.`;
 
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -2081,6 +2300,12 @@ function init() {
       }
     }
   });
+
+  // Apply saved language to tab labels
+  const _r = document.getElementById('tab-lbl-r');
+  const _s = document.getElementById('tab-lbl-s');
+  if (_r) _r.textContent = t('tab.receipts');
+  if (_s) _s.textContent = t('tab.settings');
 
   renderDashboard();
 
