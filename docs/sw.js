@@ -1,5 +1,5 @@
-const CACHE = 'slippy-v77';
-const CORE  = ['./', './index.html', './app.js', './manifest.json'];
+const CACHE = 'slippy-v78';
+const CORE  = ['./', './index.html', './app.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)));
@@ -29,7 +29,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => cached);
+      }).catch(() => caches.match('./index.html'));
     })
   );
 });
